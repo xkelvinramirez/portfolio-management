@@ -1,0 +1,54 @@
+﻿using Domain.Common;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Domain.Entities;
+
+public sealed class Portfolio : Entity
+{
+    public long UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    //public List<long> CryptoCurrencyIds { get; set; } = new List<long>();
+    //public List<long> ExchangeIds { get; set; } = new List<long>();
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    // Property navigation for related PortfolioEntry entities
+    public List<PortfolioEntry> Entries { get; set; } = new List<PortfolioEntry>();
+
+
+    public Portfolio() { }
+    public static Portfolio Create(long userId, string name, string description)
+    {
+        return new Portfolio
+        {
+            UserId = userId,
+            Name = name,
+            Description = description,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+    public decimal GetTotalValue(List<PortfolioEntry> entries)
+    {
+        return entries
+            .Where(e => e.PortfolioId == Id)
+            .Sum(e => e.Quantity * e.PricePerUnit);
+    }
+
+    public decimal GetPortfolioValueByDate(List<PortfolioEntry> entries, DateTime date)
+    {
+        return entries
+            .Where(e => e.PortfolioId == Id && e.RecordedAt.Date <= date.Date)
+            .GroupBy(e => new { e.CryptoCurrencyId, e.ExchangeId })
+            .Sum(g => g.OrderByDescending(e => e.RecordedAt).First().Quantity * g.OrderByDescending(e => e.RecordedAt).First().PricePerUnit);
+    }
+
+    public List<PortfolioEntry> GetCryptoCurrencyHistory(List<PortfolioEntry> entries, long cryptoCurrencyId)
+    {
+        return entries
+            .Where(e => e.PortfolioId == Id && e.CryptoCurrencyId == cryptoCurrencyId)
+            .OrderByDescending(e => e.RecordedAt)
+            .ToList();
+    }
+}

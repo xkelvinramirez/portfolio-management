@@ -1,9 +1,15 @@
 <Solution>
 <Folder Name="/src/">
-<Project Path="src/Application/Application.csproj" Id="e68816b3-240d-451d-b0b7-ab39bf509b27" />
+<Project Path="src/Contracts/Contracts.csproj" Id="4e5eed4b-c7b5-45b6-8a98-6afb5d059d1d" />
+<Project Path="src/Application/Application.csproj" Id="e68816b3-240d-451d-b0b7-ab39bf509b27">
+<BuildDependency Project="src/Contracts/Contracts.csproj" />
+</Project>
 <Project Path="src/Domain/Domain.csproj" Id="f4ca8367-6e15-434d-a7ed-d4c353e045c2" />
 <Project Path="src/Infrastructure/Infrastructure.csproj" Id="b3164353-0b54-4b77-8d0e-a02484c9cc55" />
-<Project Path="src/WebApi.MinimalAPI/WebApi.MinimalAPI.csproj" Id="03e068ea-2b8b-499d-9025-0a390b441545" />
+<Project Path="src/WebApi.MinimalAPI/WebApi.MinimalAPI.csproj" Id="03e068ea-2b8b-499d-9025-0a390b441545">
+<BuildDependency Project="src/Application/Application.csproj" />
+<BuildDependency Project="src/Infrastructure/Infrastructure.csproj" />
+</Project>
 <Project Path="src/Worker/Worker.csproj" Id="3db7ac66-7668-45da-bd5a-ce22f1eb8999" />
 </Folder>
 <Folder Name="/tests/">
