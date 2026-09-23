@@ -1,6 +1,10 @@
 ﻿
+using System.Text;
 using Asp.Versioning;
+using Infrastructure.Common.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.IdentityModel.Tokens;
 using WebApi.MinimalAPI.Endpoints.Common;
 
 namespace WebApi.MinimalAPI;
@@ -11,7 +15,8 @@ public static class DependencyInjection
     {
         services.AddHttpContextAccessor();
 
-        //services.AddAuthorization();
+        services.AddJwtAuthentication(configuration);
+        services.AddAuthorization();
 
         services.AddProblemDetails();
 
@@ -35,6 +40,29 @@ public static class DependencyInjection
             })
             .AddOpenApi();
 #pragma warning restore IL2026
+
+        return services;
+    }
+
+    private static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
+    {
+        var jwtOptions = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtOptions.Audience,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
 
         return services;
     }

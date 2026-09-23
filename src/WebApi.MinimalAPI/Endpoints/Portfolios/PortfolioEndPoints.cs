@@ -17,7 +17,8 @@ public static class PortfolioEndPoints
         var bases = app.MapGroup("/api/v{version:apiVersion}/Portfolio/")
             .WithApiVersionSet(versionSet)
             .MapToApiVersion(1)
-            .WithTags(EndpointTags.Portfolio);
+            .WithTags(EndpointTags.Portfolio)
+            .RequireAuthorization();
 
         bases.MapPost("/", async (ISender mediatr, CreatePortfolioRequest request) =>
         {

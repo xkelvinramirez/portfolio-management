@@ -6,4 +6,5 @@ public static class EndpointTags
     public const string Exchange = "Exchange";
     public const string PortfolioEntry = "PortfolioEntry";
     public const string CryptoCurrency = "CryptoCurrency";
+    public const string Users = "Users";
 }

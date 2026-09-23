@@ -10,8 +10,12 @@ using System.Diagnostics;
 using System.Reflection;
 using Infrastructure.Common.Options;
 using Infrastructure.Common.Persistence.Contexts;
+using Infrastructure.Common.Security;
 using Infrastructure.Portfolios;
+using Infrastructure.Users;
+using Application.Common.Security;
 using Application.Portfolios.Interfaces;
+using Application.Users.Interfaces;
 
 namespace Infrastructure;
 
@@ -28,6 +32,7 @@ public static class DependencyInjection
             .AddRepositories()
             .AddPackages(configuration)
             .AddAdapters()
+            .AddSecurity()
             .AddHealthChecksForDependencies(configuration);
 
         return services;
@@ -67,6 +72,7 @@ public static class DependencyInjection
     private static IServiceCollection AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IPortfolioRepository, PortfolioRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         //services.AddScoped<IBacklogItemRepository, BacklogItemRepository>();
         //services.AddScoped<ICategoryRepository, CategoryRepository>();
         return services;
@@ -74,6 +80,13 @@ public static class DependencyInjection
 
     private static IServiceCollection AddAdapters(this IServiceCollection services)
     {
+        return services;
+    }
+
+    private static IServiceCollection AddSecurity(this IServiceCollection services)
+    {
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         return services;
     }
 
@@ -90,6 +103,12 @@ public static class DependencyInjection
         services
             .AddOptions<ConnectionStringOptions>()
             .Bind(configuration.GetRequiredSection(ConnectionStringOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services
+            .AddOptions<JwtOptions>()
+            .Bind(configuration.GetRequiredSection(JwtOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 

@@ -49,7 +49,9 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
-//app.UseAuthorization();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseOutputCache();
 
