@@ -5,8 +5,7 @@
       "launchBrowser": true,
       "launchUrl": "todos",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "MEDIATR_LICENSE_KEY": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ikx1Y2t5UGVubnlTb2Z0d2FyZUxpY2Vuc2VLZXkvYmJiMTNhY2I1OTkwNGQ4OWI0Y2IxYzg1ZjA4OGNjZjkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2x1Y2t5cGVubnlzb2Z0d2FyZS5jb20iLCJhdWQiOiJMdWNreVBlbm55U29mdHdhcmUiLCJleHAiOiIxODIxNjU3NjAwIiwiaWF0IjoiMTc5MDE0ODgzMiIsImFjY291bnRfaWQiOiIwMWEwY2QyOWEyNDQ3ZmZiODE1YTM3MjgyZGZiOGNkZCIsImN1c3RvbWVyX2lkIjoiMDFhMGNkMjlhMjQ0N2ZmYjgxNWEzNzI4MmRmYjhjZGQiLCJzdWJfaWQiOiItIiwiZWRpdGlvbiI6IjAiLCJ0eXBlIjoiMiJ9.fTJ06TETO1x8awG9Ve4ldnXpxzCdny2ZGpVYin9WKq7YhARMeqkUap1VrTxmFXzjrpX7JUBjxdLvjHYl0bS1hIFZQB9RKwIix2fHLSeeeEuAMLwsvCIx--idCsTByBpfEpcxEfnFRVWhxwRLG4mIQq6--3RoDj9qK5G99AFLEiof-PYpYd0VR0UTDefCmteZ1BeeQIBlJ63PekWlsqxRdAwViGqpIZMIgNZtrLKXAcvSFftL4fxYjwLM7jnejOyJAk-6R0VpikP8zzQvBDQ88e4q4Vthtll1CN4xh97dZDQJimxK6BRpTzSBSI0E3TrWY_h2Ec5pxkLb7C-paz0tGg"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5229"

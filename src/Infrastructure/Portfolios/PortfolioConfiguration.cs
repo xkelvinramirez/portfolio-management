@@ -17,9 +17,5 @@ internal sealed class PortfolioConfiguration : IEntityTypeConfiguration<Portfoli
         builder.Property(p => p.CreatedAt)
             .IsRequired();
         builder.HasOne<User>().WithMany().HasForeignKey(t => t.UserId);
-        //builder.HasMany(p => p.Entries)
-        //    .WithOne()
-        //    .HasForeignKey(e => e.PortfolioId)
-        //    .OnDelete(DeleteBehavior.Cascade);
     }
 }

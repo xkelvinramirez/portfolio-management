@@ -14,4 +14,7 @@ public sealed class PortfolioEntry : Entity
     public decimal PricePerUnit { get; set; }
     public DateTime RecordedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public CryptoCurrency CryptoCurrency { get; set; } = null!;
+    public Exchange Exchange { get; set; } = null!;
 }

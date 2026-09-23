@@ -104,6 +104,6 @@ public static class DependencyInjection
             setup.AddHealthCheckEndpoint("General", "/health/json");
             setup.SetHeaderText(Assembly.GetEntryAssembly()?.GetName().Name ?? "Healthcheck");
         }
-        );
+        ).AddInMemoryStorage();
     }
 }
