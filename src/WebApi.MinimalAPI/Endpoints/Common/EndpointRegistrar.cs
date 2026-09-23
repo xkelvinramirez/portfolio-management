@@ -1,11 +1,11 @@
-﻿namespace WebApi.MinimalAPI.Endpoints.Common;
+﻿using WebApi.MinimalAPI.Endpoints.Portfolios;
+
+namespace WebApi.MinimalAPI.Endpoints.Common;
 public static class EndpointRegistrar
 {
     public static WebApplication RegisterEndpoints(this WebApplication app)
     {
-        //app.RegisterAgentEndpoints();
-        //app.RegisterBacklogItemEndpoints();
-        //app.RegisterCategoryEndpoints();
+        app.RegisterPortfolioEndpoints();
         return app;
     }
 }

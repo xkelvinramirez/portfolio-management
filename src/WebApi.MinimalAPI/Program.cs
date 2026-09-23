@@ -3,6 +3,7 @@ using Asp.Versioning.ApiExplorer;
 using HealthChecks.UI.Client;
 using Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Scalar.AspNetCore;
 using Serilog;
 using WebApi.MinimalAPI;
 using WebApi.MinimalAPI.Endpoints.Common;
@@ -43,6 +44,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().WithDocumentPerVersion();
+    app.MapScalarApiReference();
 }
 app.UseExceptionHandler();
 

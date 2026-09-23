@@ -98,6 +98,8 @@ public static class DependencyInjection
 
     private static void AddHealthChecksForDependencies(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHealthChecks()
+            .AddNpgSql(configuration.GetConnectionString("Database")!, name: "postgres");
 
         services.AddHealthChecksUI(setup =>
         {

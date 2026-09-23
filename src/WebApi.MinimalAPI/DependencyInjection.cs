@@ -17,7 +17,7 @@ public static class DependencyInjection
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
-        //services.AddOutputCachingConfiguration(configuration);
+        services.AddOutputCache();
 
         services.AddResponseCompression(options =>
         {
