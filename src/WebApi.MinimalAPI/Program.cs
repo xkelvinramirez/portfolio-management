@@ -24,7 +24,7 @@ builder.Host.UseSerilog((context, loggerConfig) => loggerConfig.ReadFrom.Configu
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("CryptoDashboard", policy =>
+    options.AddPolicy("portfolio-dashboard", policy =>
     {
         policy
             .WithOrigins(
@@ -38,8 +38,10 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
+
 //
 var app = builder.Build();
+app.UseCors("portfolio-dashboard");
 
 if (app.Environment.IsDevelopment())
 {

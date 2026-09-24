@@ -25,10 +25,10 @@ public sealed class UpdatePortfolioCommandHandler(
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{command.Id}' was not found.");
         }
 
-        var duplicate = await portfolioRepository.GetPortfolioByNameAsync(request.Name, cancellationToken);
+        var duplicate = await portfolioRepository.GetPortfolioByNameAsync(portfolio.UserId, request.Name, cancellationToken);
         if (duplicate is not null && duplicate.Id != portfolio.Id)
         {
-            return Error.Conflict("Portfolio.AlreadyExists", $"A portfolio with the name '{request.Name}' already exists.");
+            return Error.Conflict("Portfolio.AlreadyExists", $"You already have a portfolio named '{request.Name}'.");
         }
 
         portfolio.Name = request.Name;

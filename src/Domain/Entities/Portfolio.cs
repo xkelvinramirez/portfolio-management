@@ -10,10 +10,9 @@ public sealed class Portfolio : Entity
     public long UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    //public List<long> CryptoCurrencyIds { get; set; } = new List<long>();
-    //public List<long> ExchangeIds { get; set; } = new List<long>();
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
     // Property navigation for related PortfolioEntry entities
     public List<PortfolioEntry> Entries { get; set; } = new List<PortfolioEntry>();
 

@@ -23,11 +23,11 @@ public sealed class CreatePortfolioCommandHandler(
         var request = command.Request;
         logger.LogInformation("Handling CreatePortfolioCommand for Portfolio: {PortfolioName}", request.Name);
 
-        // Check if a portfolio with the same name already exists
-        var existingPortfolio = await portfolioRepository.GetPortfolioByNameAsync(request.Name, cancellationToken);
+        // Check if this user already has a portfolio with the same name
+        var existingPortfolio = await portfolioRepository.GetPortfolioByNameAsync(request.UserId, request.Name, cancellationToken);
         if (existingPortfolio is not null)
         {
-            return Error.Conflict("Portfolio.AlreadyExists", $"A portfolio with the name '{request.Name}' already exists.");
+            return Error.Conflict("Portfolio.AlreadyExists", $"You already have a portfolio named '{request.Name}'.");
         }
         // Create a new portfolio entity
         var newPortfolio = Portfolio.Create(

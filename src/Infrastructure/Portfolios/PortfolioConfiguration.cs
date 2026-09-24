@@ -10,7 +10,10 @@ internal sealed class PortfolioConfiguration : IEntityTypeConfiguration<Portfoli
     {
         builder.ToTable("Portfolios");
         builder.HasKey(p => p.Id);
-        builder.HasIndex(p => p.UserId);
+        // A composite unique index (leading with UserId) both enforces "unique per user,
+        // not globally" at the database level and still serves lookups filtered by UserId
+        // alone, so it replaces the old standalone, non-unique UserId index.
+        builder.HasIndex(p => new { p.UserId, p.Name }).IsUnique();
         builder.Property(p => p.Name)
             .IsRequired()
             .HasMaxLength(100);
