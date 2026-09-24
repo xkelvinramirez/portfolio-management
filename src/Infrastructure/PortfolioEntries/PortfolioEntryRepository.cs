@@ -11,4 +11,12 @@ internal sealed class PortfolioEntryRepository(AppDbContext dbContext) : Reposit
 {
     public Task<PortfolioEntry?> GetByIdAsync(long id, CancellationToken cancellationToken)
         => dbContext.Set<PortfolioEntry>().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+
+    public Task<List<PortfolioEntry>> GetByPortfolioIdAsync(long portfolioId, CancellationToken cancellationToken)
+        => dbContext.Set<PortfolioEntry>()
+            .AsNoTracking()
+            .Include(e => e.CryptoCurrency)
+            .Include(e => e.Exchange)
+            .Where(e => e.PortfolioId == portfolioId)
+            .ToListAsync(cancellationToken);
 }

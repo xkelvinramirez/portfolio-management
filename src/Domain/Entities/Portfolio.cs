@@ -38,10 +38,7 @@ public sealed class Portfolio : Entity
 
     public decimal GetPortfolioValueByDate(List<PortfolioEntry> entries, DateTime date)
     {
-        return entries
-            .Where(e => e.PortfolioId == Id && e.RecordedAt.Date <= date.Date)
-            .GroupBy(e => new { e.CryptoCurrencyId, e.ExchangeId })
-            .Sum(g => g.OrderByDescending(e => e.RecordedAt).First().Quantity * g.OrderByDescending(e => e.RecordedAt).First().PricePerUnit);
+        return GetHoldingsAsOf(entries, date).Sum(e => e.Quantity * e.PricePerUnit);
     }
 
     public List<PortfolioEntry> GetCryptoCurrencyHistory(List<PortfolioEntry> entries, long cryptoCurrencyId)
@@ -49,6 +46,31 @@ public sealed class Portfolio : Entity
         return entries
             .Where(e => e.PortfolioId == Id && e.CryptoCurrencyId == cryptoCurrencyId)
             .OrderByDescending(e => e.RecordedAt)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The current snapshot as of a date: one entry per (CryptoCurrency, Exchange) pair,
+    /// the latest recorded one on or before the date. Backs both the holdings table and allocation views.
+    /// </summary>
+    public List<PortfolioEntry> GetHoldingsAsOf(List<PortfolioEntry> entries, DateTime date)
+    {
+        return entries
+            .Where(e => e.PortfolioId == Id && e.RecordedAt.Date <= date.Date)
+            .GroupBy(e => new { e.CryptoCurrencyId, e.ExchangeId })
+            .Select(g => g.OrderByDescending(e => e.RecordedAt).First())
+            .ToList();
+    }
+
+    public List<PortfolioValuationPoint> GetValueHistory(List<PortfolioEntry> entries)
+    {
+        var relevant = entries.Where(e => e.PortfolioId == Id).ToList();
+
+        return relevant
+            .Select(e => e.RecordedAt.Date)
+            .Distinct()
+            .OrderBy(date => date)
+            .Select(date => new PortfolioValuationPoint(date, GetPortfolioValueByDate(relevant, date)))
             .ToList();
     }
 }

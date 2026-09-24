@@ -65,6 +65,42 @@ public static class PortfolioEndPoints
            .Produces(404)
            .Produces<List<Error>>(400);
 
+        bases.MapGet("{id:long}/value", async (ISender mediatr, long id, DateTime? date) =>
+        {
+            var result = await mediatr.Send(new GetPortfolioValueQuery(id, date));
+            return result.Match(Results.Ok, errors => errors.ToProblemResult());
+        })
+           .Produces<PortfolioValueResponse>()
+           .Produces(404)
+           .Produces<List<Error>>(400);
+
+        bases.MapGet("{id:long}/history", async (ISender mediatr, long id) =>
+        {
+            var result = await mediatr.Send(new GetPortfolioHistoryQuery(id));
+            return result.Match(Results.Ok, errors => errors.ToProblemResult());
+        })
+           .Produces<PortfolioHistoryResponse>()
+           .Produces(404)
+           .Produces<List<Error>>(400);
+
+        bases.MapGet("{id:long}/holdings", async (ISender mediatr, long id, DateTime? date) =>
+        {
+            var result = await mediatr.Send(new GetPortfolioHoldingsQuery(id, date));
+            return result.Match(Results.Ok, errors => errors.ToProblemResult());
+        })
+           .Produces<PortfolioHoldingsResponse>()
+           .Produces(404)
+           .Produces<List<Error>>(400);
+
+        bases.MapGet("{id:long}/allocation", async (ISender mediatr, long id, DateTime? date, PortfolioAllocationGroupBy groupBy = PortfolioAllocationGroupBy.Asset) =>
+        {
+            var result = await mediatr.Send(new GetPortfolioAllocationQuery(id, groupBy, date));
+            return result.Match(Results.Ok, errors => errors.ToProblemResult());
+        })
+           .Produces<PortfolioAllocationResponse>()
+           .Produces(404)
+           .Produces<List<Error>>(400);
+
         return app;
     }
 }
