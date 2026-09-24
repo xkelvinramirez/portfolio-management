@@ -144,7 +144,7 @@ Backend API (.NET)
 ### Error de conexión con la API
 ```
 Verifica que:
-- La API esté ejecutándose en https://localhost:7123
+- La API esté ejecutándose en https://localhost:5229
 - CORS esté habilitado en tu backend
 - Las credenciales SSL sean válidas (desarrollo)
 ```
