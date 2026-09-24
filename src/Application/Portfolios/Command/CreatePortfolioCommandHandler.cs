@@ -1,11 +1,11 @@
-﻿using Application.Common.UnitOfWork;
+using Application.Common.Security;
+using Application.Common.UnitOfWork;
 using Application.Portfolios.Interfaces;
 using Contracts.Portfolios;
 using Domain.Entities;
 using ErrorOr;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
 
 
 namespace Application.Portfolios.Command;
@@ -15,23 +15,25 @@ public sealed record CreatePortfolioCommand(CreatePortfolioRequest Request) : IR
 public sealed class CreatePortfolioCommandHandler(
     ILogger<CreatePortfolioCommandHandler> logger,
     IPortfolioRepository portfolioRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<CreatePortfolioCommand, ErrorOr<CreatePortfolioResponse>>
 {
     public async Task<ErrorOr<CreatePortfolioResponse>> Handle(CreatePortfolioCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
+        var userId = currentUserProvider.UserId;
         logger.LogInformation("Handling CreatePortfolioCommand for Portfolio: {PortfolioName}", request.Name);
 
         // Check if this user already has a portfolio with the same name
-        var existingPortfolio = await portfolioRepository.GetPortfolioByNameAsync(request.UserId, request.Name, cancellationToken);
+        var existingPortfolio = await portfolioRepository.GetPortfolioByNameAsync(userId, request.Name, cancellationToken);
         if (existingPortfolio is not null)
         {
             return Error.Conflict("Portfolio.AlreadyExists", $"You already have a portfolio named '{request.Name}'.");
         }
         // Create a new portfolio entity
         var newPortfolio = Portfolio.Create(
-            request.UserId,
+            userId,
             request.Name,
             request.Description);
 

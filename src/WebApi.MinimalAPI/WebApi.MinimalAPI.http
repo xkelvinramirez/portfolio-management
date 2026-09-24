@@ -1,11 +1,11 @@
 @WebApi.MinimalAPI_HostAddress = http://localhost:5229
 
-GET {{WebApi.MinimalAPI_HostAddress}}/todos/
+GET {{WebApi.MinimalAPI_HostAddress}}/scalar/v1
 Accept: application/json
 
 ###
 
-GET {{WebApi.MinimalAPI_HostAddress}}/todos/1
+GET {{WebApi.MinimalAPI_HostAddress}}/scalar/v1
 Accept: application/json
 
 ###

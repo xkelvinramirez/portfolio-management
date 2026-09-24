@@ -6,7 +6,14 @@ public sealed record PortfolioHistoryPointResponse(
     decimal Value
     );
 
+public sealed record PortfolioAssetHistorySeriesResponse(
+    long CryptoCurrencyId,
+    string Symbol,
+    List<PortfolioHistoryPointResponse> Points
+    );
+
 public sealed record PortfolioHistoryResponse(
     long PortfolioId,
-    List<PortfolioHistoryPointResponse> Points
+    List<PortfolioHistoryPointResponse> Points,
+    List<PortfolioAssetHistorySeriesResponse> ByAsset
     );

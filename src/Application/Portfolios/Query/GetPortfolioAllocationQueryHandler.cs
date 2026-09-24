@@ -1,3 +1,4 @@
+using Application.Common.Security;
 using Application.Portfolios.Interfaces;
 using Application.PortfolioEntries.Interfaces;
 using Contracts.Portfolios;
@@ -10,13 +11,14 @@ public sealed record GetPortfolioAllocationQuery(long Id, PortfolioAllocationGro
 
 public sealed class GetPortfolioAllocationQueryHandler(
     IPortfolioRepository portfolioRepository,
-    IPortfolioEntryRepository portfolioEntryRepository
+    IPortfolioEntryRepository portfolioEntryRepository,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<GetPortfolioAllocationQuery, ErrorOr<PortfolioAllocationResponse>>
 {
     public async Task<ErrorOr<PortfolioAllocationResponse>> Handle(GetPortfolioAllocationQuery query, CancellationToken cancellationToken)
     {
         var portfolio = await portfolioRepository.GetByIdAsync(query.Id, cancellationToken);
-        if (portfolio is null)
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{query.Id}' was not found.");
         }

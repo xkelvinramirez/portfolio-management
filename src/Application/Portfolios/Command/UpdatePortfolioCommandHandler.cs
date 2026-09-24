@@ -1,3 +1,4 @@
+using Application.Common.Security;
 using Application.Common.UnitOfWork;
 using Application.Portfolios.Interfaces;
 using Contracts.Portfolios;
@@ -12,7 +13,8 @@ public sealed record UpdatePortfolioCommand(long Id, UpdatePortfolioRequest Requ
 public sealed class UpdatePortfolioCommandHandler(
     ILogger<UpdatePortfolioCommandHandler> logger,
     IPortfolioRepository portfolioRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<UpdatePortfolioCommand, ErrorOr<UpdatePortfolioResponse>>
 {
     public async Task<ErrorOr<UpdatePortfolioResponse>> Handle(UpdatePortfolioCommand command, CancellationToken cancellationToken)
@@ -20,7 +22,7 @@ public sealed class UpdatePortfolioCommandHandler(
         var request = command.Request;
 
         var portfolio = await portfolioRepository.GetByIdAsync(command.Id, cancellationToken);
-        if (portfolio is null)
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{command.Id}' was not found.");
         }

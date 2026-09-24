@@ -1,3 +1,4 @@
+using Application.Common.Security;
 using Application.Common.UnitOfWork;
 using Application.Portfolios.Interfaces;
 using ErrorOr;
@@ -11,13 +12,14 @@ public sealed record DeletePortfolioCommand(long Id) : IRequest<ErrorOr<Deleted>
 public sealed class DeletePortfolioCommandHandler(
     ILogger<DeletePortfolioCommandHandler> logger,
     IPortfolioRepository portfolioRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<DeletePortfolioCommand, ErrorOr<Deleted>>
 {
     public async Task<ErrorOr<Deleted>> Handle(DeletePortfolioCommand command, CancellationToken cancellationToken)
     {
         var portfolio = await portfolioRepository.GetByIdAsync(command.Id, cancellationToken);
-        if (portfolio is null)
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{command.Id}' was not found.");
         }

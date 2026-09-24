@@ -6,6 +6,9 @@ public sealed class GetPortfolioEntriesQueryValidator : AbstractValidator<GetPor
 {
     public GetPortfolioEntriesQueryValidator()
     {
+        RuleFor(x => x.PortfolioId)
+            .GreaterThan(0);
+
         RuleFor(x => x.Paginator.Page)
             .GreaterThan(0);
 

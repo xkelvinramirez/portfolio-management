@@ -1,7 +1,9 @@
+using Application.Common.Security;
 using Application.Common.UnitOfWork;
 using Application.CryptoCurrencies.Interfaces;
 using Application.Exchanges.Interfaces;
 using Application.PortfolioEntries.Interfaces;
+using Application.Portfolios.Interfaces;
 using Contracts.PortfolioEntries;
 using ErrorOr;
 using MediatR;
@@ -14,9 +16,11 @@ public sealed record UpdatePortfolioEntryCommand(long Id, UpdatePortfolioEntryRe
 public sealed class UpdatePortfolioEntryCommandHandler(
     ILogger<UpdatePortfolioEntryCommandHandler> logger,
     IPortfolioEntryRepository portfolioEntryRepository,
+    IPortfolioRepository portfolioRepository,
     ICryptoCurrencyRepository cryptoCurrencyRepository,
     IExchangeRepository exchangeRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<UpdatePortfolioEntryCommand, ErrorOr<UpdatePortfolioEntryResponse>>
 {
     public async Task<ErrorOr<UpdatePortfolioEntryResponse>> Handle(UpdatePortfolioEntryCommand command, CancellationToken cancellationToken)
@@ -25,6 +29,12 @@ public sealed class UpdatePortfolioEntryCommandHandler(
 
         var entry = await portfolioEntryRepository.GetByIdAsync(command.Id, cancellationToken);
         if (entry is null)
+        {
+            return Error.NotFound("PortfolioEntry.NotFound", $"Portfolio entry with ID '{command.Id}' was not found.");
+        }
+
+        var owningPortfolio = await portfolioRepository.GetByIdAsync(entry.PortfolioId, cancellationToken);
+        if (owningPortfolio is null || owningPortfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("PortfolioEntry.NotFound", $"Portfolio entry with ID '{command.Id}' was not found.");
         }

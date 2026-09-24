@@ -72,4 +72,29 @@ public sealed class Portfolio : Entity
             .Select(date => new PortfolioValuationPoint(date, GetPortfolioValueByDate(relevant, date)))
             .ToList();
     }
+
+    /// <summary>
+    /// One valuation series per cryptocurrency, sampled on the same dates as <see cref="GetValueHistory"/>
+    /// so every asset line shares the total line's x-axis (0 before the asset's first recorded entry).
+    /// </summary>
+    public List<PortfolioAssetValuationSeries> GetValueHistoryByAsset(List<PortfolioEntry> entries)
+    {
+        var relevant = entries.Where(e => e.PortfolioId == Id).ToList();
+        var dates = relevant.Select(e => e.RecordedAt.Date).Distinct().OrderBy(date => date).ToList();
+
+        return relevant
+            .GroupBy(e => new { e.CryptoCurrencyId, e.CryptoCurrency.Symbol })
+            .Select(assetGroup =>
+            {
+                var assetEntries = assetGroup.ToList();
+                var points = dates
+                    .Select(date => new PortfolioValuationPoint(
+                        date,
+                        GetHoldingsAsOf(assetEntries, date).Sum(e => e.Quantity * e.PricePerUnit)))
+                    .ToList();
+                return new PortfolioAssetValuationSeries(assetGroup.Key.CryptoCurrencyId, assetGroup.Key.Symbol, points);
+            })
+            .OrderBy(series => series.Symbol)
+            .ToList();
+    }
 }

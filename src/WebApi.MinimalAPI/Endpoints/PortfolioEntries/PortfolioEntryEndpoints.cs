@@ -31,12 +31,13 @@ public static class PortfolioEntryEndpoints
            .Produces(404)
            .Produces<List<Error>>(400);
 
-        bases.MapGet("/", async (ISender mediatr, [AsParameters] PaginatorRequest paginator, long? portfolioId) =>
+        bases.MapGet("/", async (ISender mediatr, [AsParameters] PaginatorRequest paginator, long portfolioId) =>
         {
             var result = await mediatr.Send(new GetPortfolioEntriesQuery(portfolioId, paginator));
-            return result.Match(Results.Ok, Results.BadRequest);
+            return result.Match(Results.Ok, errors => errors.ToProblemResult());
         })
            .Produces<PaginatorResponse<PortfolioEntryResponse>>()
+           .Produces(404)
            .Produces<List<Error>>(400);
 
         bases.MapGet("{id:long}", async (ISender mediatr, long id) =>

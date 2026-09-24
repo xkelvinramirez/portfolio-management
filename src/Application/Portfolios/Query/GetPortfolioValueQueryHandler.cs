@@ -1,3 +1,4 @@
+using Application.Common.Security;
 using Application.Portfolios.Interfaces;
 using Application.PortfolioEntries.Interfaces;
 using Contracts.Portfolios;
@@ -10,13 +11,14 @@ public sealed record GetPortfolioValueQuery(long Id, DateTime? Date) : IRequest<
 
 public sealed class GetPortfolioValueQueryHandler(
     IPortfolioRepository portfolioRepository,
-    IPortfolioEntryRepository portfolioEntryRepository
+    IPortfolioEntryRepository portfolioEntryRepository,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<GetPortfolioValueQuery, ErrorOr<PortfolioValueResponse>>
 {
     public async Task<ErrorOr<PortfolioValueResponse>> Handle(GetPortfolioValueQuery query, CancellationToken cancellationToken)
     {
         var portfolio = await portfolioRepository.GetByIdAsync(query.Id, cancellationToken);
-        if (portfolio is null)
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{query.Id}' was not found.");
         }

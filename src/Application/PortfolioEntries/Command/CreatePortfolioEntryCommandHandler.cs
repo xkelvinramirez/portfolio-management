@@ -1,3 +1,4 @@
+using Application.Common.Security;
 using Application.Common.UnitOfWork;
 using Application.CryptoCurrencies.Interfaces;
 using Application.Exchanges.Interfaces;
@@ -19,7 +20,8 @@ public sealed class CreatePortfolioEntryCommandHandler(
     IPortfolioRepository portfolioRepository,
     ICryptoCurrencyRepository cryptoCurrencyRepository,
     IExchangeRepository exchangeRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<CreatePortfolioEntryCommand, ErrorOr<CreatePortfolioEntryResponse>>
 {
     public async Task<ErrorOr<CreatePortfolioEntryResponse>> Handle(CreatePortfolioEntryCommand command, CancellationToken cancellationToken)
@@ -28,7 +30,7 @@ public sealed class CreatePortfolioEntryCommandHandler(
         logger.LogInformation("Handling CreatePortfolioEntryCommand for Portfolio: {PortfolioId}", request.PortfolioId);
 
         var portfolio = await portfolioRepository.GetByIdAsync(request.PortfolioId, cancellationToken);
-        if (portfolio is null)
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
         {
             return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{request.PortfolioId}' was not found.");
         }

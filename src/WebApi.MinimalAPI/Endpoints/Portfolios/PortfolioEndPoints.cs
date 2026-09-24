@@ -30,9 +30,9 @@ public static class PortfolioEndPoints
            .Produces<CreatePortfolioResponse>()
            .Produces<List<Error>>(400);
 
-        bases.MapGet("/", async (ISender mediatr, [AsParameters] PaginatorRequest paginator, long? userId) =>
+        bases.MapGet("/", async (ISender mediatr, [AsParameters] PaginatorRequest paginator) =>
         {
-            var result = await mediatr.Send(new GetPortfoliosQuery(userId, paginator));
+            var result = await mediatr.Send(new GetPortfoliosQuery(paginator));
             return result.Match(Results.Ok, Results.BadRequest);
         })
            .Produces<PaginatorResponse<PortfolioResponse>>()

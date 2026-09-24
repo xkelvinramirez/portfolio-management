@@ -1,5 +1,6 @@
 ﻿
 using System.Text;
+using Application.Common.Security;
 using Asp.Versioning;
 using Infrastructure.Common.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
 using WebApi.MinimalAPI.Endpoints.Common;
 using WebApi.MinimalAPI.OpenApi;
+using WebApi.MinimalAPI.Security;
 
 namespace WebApi.MinimalAPI;
 
@@ -15,6 +17,7 @@ public static class DependencyInjection
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
 
         services.AddJwtAuthentication(configuration);
         services.AddAuthorization();
@@ -55,6 +58,9 @@ public static class DependencyInjection
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                // Keep claim types as issued ("sub", not ClaimTypes.NameIdentifier) so
+                // ICurrentUserProvider can read JwtRegisteredClaimNames.Sub directly.
+                options.MapInboundClaims = false;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

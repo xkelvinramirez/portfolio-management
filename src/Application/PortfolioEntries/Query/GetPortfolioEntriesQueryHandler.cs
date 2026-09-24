@@ -1,26 +1,34 @@
+using Application.Common.Security;
 using Application.PortfolioEntries.Interfaces;
+using Application.Portfolios.Interfaces;
 using Contracts.Common;
 using Contracts.PortfolioEntries;
-using Domain.Entities;
 using ErrorOr;
 using MediatR;
-using System.Linq.Expressions;
 
 namespace Application.PortfolioEntries.Query;
 
-public sealed record GetPortfolioEntriesQuery(long? PortfolioId, PaginatorRequest Paginator) : IRequest<ErrorOr<PaginatorResponse<PortfolioEntryResponse>>>;
+public sealed record GetPortfolioEntriesQuery(long PortfolioId, PaginatorRequest Paginator) : IRequest<ErrorOr<PaginatorResponse<PortfolioEntryResponse>>>;
 
 public sealed class GetPortfolioEntriesQueryHandler(
-    IPortfolioEntryRepository portfolioEntryRepository
+    IPortfolioEntryRepository portfolioEntryRepository,
+    IPortfolioRepository portfolioRepository,
+    ICurrentUserProvider currentUserProvider
     ) : IRequestHandler<GetPortfolioEntriesQuery, ErrorOr<PaginatorResponse<PortfolioEntryResponse>>>
 {
     public async Task<ErrorOr<PaginatorResponse<PortfolioEntryResponse>>> Handle(GetPortfolioEntriesQuery query, CancellationToken cancellationToken)
     {
-        Expression<Func<PortfolioEntry, bool>> predicate = query.PortfolioId.HasValue
-            ? entry => entry.PortfolioId == query.PortfolioId.Value
-            : _ => true;
+        var portfolio = await portfolioRepository.GetByIdAsync(query.PortfolioId, cancellationToken);
+        if (portfolio is null || portfolio.UserId != currentUserProvider.UserId)
+        {
+            return Error.NotFound("Portfolio.NotFound", $"Portfolio with ID '{query.PortfolioId}' was not found.");
+        }
 
-        var result = await portfolioEntryRepository.GetAllAsync(query.Paginator.Page, query.Paginator.Limit, predicate, cancellationToken);
+        var result = await portfolioEntryRepository.GetAllAsync(
+            query.Paginator.Page,
+            query.Paginator.Limit,
+            entry => entry.PortfolioId == query.PortfolioId,
+            cancellationToken);
 
         return new PaginatorResponse<PortfolioEntryResponse>
         {
