@@ -17,4 +17,24 @@ public sealed class PortfolioEntry : Entity
 
     public CryptoCurrency CryptoCurrency { get; set; } = null!;
     public Exchange Exchange { get; set; } = null!;
+
+    public static PortfolioEntry Create(
+        long portfolioId,
+        long cryptoCurrencyId,
+        long exchangeId,
+        decimal quantity,
+        decimal pricePerUnit,
+        DateTime recordedAt)
+    {
+        return new PortfolioEntry
+        {
+            PortfolioId = portfolioId,
+            CryptoCurrencyId = cryptoCurrencyId,
+            ExchangeId = exchangeId,
+            Quantity = quantity,
+            PricePerUnit = pricePerUnit,
+            RecordedAt = recordedAt,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
 using WebApi.MinimalAPI.Endpoints.Common;
+using WebApi.MinimalAPI.OpenApi;
 
 namespace WebApi.MinimalAPI;
 
@@ -38,7 +39,10 @@ public static class DependencyInjection
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
             })
-            .AddOpenApi();
+            .AddOpenApi(options =>
+            {
+                options.Document.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+            });
 #pragma warning restore IL2026
 
         return services;

@@ -9,6 +9,9 @@ namespace Infrastructure.Portfolios;
 
 internal sealed class PortfolioRepository(AppDbContext dbContext) : Repository<Portfolio>(dbContext), IPortfolioRepository
 {
+    public Task<Portfolio?> GetByIdAsync(long id, CancellationToken cancellationToken)
+        => dbContext.Set<Portfolio>().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
     public Task<Portfolio?> GetPortfolioByNameAsync(string name, CancellationToken cancellationToken)
         => dbContext.Set<Portfolio>().FirstOrDefaultAsync(p => p.Name == name, cancellationToken);
 }

@@ -13,9 +13,15 @@ using Infrastructure.Common.Persistence.Contexts;
 using Infrastructure.Common.Security;
 using Infrastructure.Portfolios;
 using Infrastructure.Users;
+using Infrastructure.Exchanges;
+using Infrastructure.CryptoCurrencies;
+using Infrastructure.PortfolioEntries;
 using Application.Common.Security;
 using Application.Portfolios.Interfaces;
 using Application.Users.Interfaces;
+using Application.Exchanges.Interfaces;
+using Application.CryptoCurrencies.Interfaces;
+using Application.PortfolioEntries.Interfaces;
 
 namespace Infrastructure;
 
@@ -46,9 +52,6 @@ public static class DependencyInjection
 
     private static IServiceCollection AddDbContexts(this IServiceCollection services, IConfiguration configuration)
     {
-       // services.AddDbContextPool<AppDbContext>(options =>
-       //    options.UseInMemoryDatabase("AgentsPocDb")
-       //);
         string? connectionString = configuration.GetConnectionString("Database");
         services.AddDbContext<AppDbContext>(
             options => options
@@ -73,8 +76,10 @@ public static class DependencyInjection
     {
         services.AddScoped<IPortfolioRepository, PortfolioRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        //services.AddScoped<IBacklogItemRepository, BacklogItemRepository>();
-        //services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IExchangeRepository, ExchangeRepository>();
+        services.AddScoped<ICryptoCurrencyRepository, CryptoCurrencyRepository>();
+        services.AddScoped<IPortfolioEntryRepository, PortfolioEntryRepository>();
+
         return services;
     }
 
