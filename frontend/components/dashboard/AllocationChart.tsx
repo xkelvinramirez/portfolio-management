@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { usePortfolioAllocation } from "@/hooks/usePortfolioAnalytics";
 import { PortfolioAllocationGroupBy } from "@/types";
 import { formatCurrency, formatPercentage } from "@/lib/format";
+import { getApiErrorMessage } from "@/lib/errors";
 
 type GroupBy = "asset" | "exchange";
 
@@ -24,7 +26,7 @@ interface AllocationChartProps {
 
 export function AllocationChart({ portfolioId }: AllocationChartProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>("asset");
-  const { data, isPending } = usePortfolioAllocation(
+  const { data, isPending, isError, error } = usePortfolioAllocation(
     portfolioId,
     groupBy === "asset" ? PortfolioAllocationGroupBy.Asset : PortfolioAllocationGroupBy.Exchange
   );
@@ -47,6 +49,10 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
 
       {isPending ? (
         <div className="mt-4 h-48 animate-pulse bg-paper-raised" />
+      ) : isError ? (
+        <div className="mt-4">
+          <ErrorNotice>{getApiErrorMessage(error) ?? "No se pudo cargar la participación."}</ErrorNotice>
+        </div>
       ) : items.length === 0 ? (
         <p className="mt-4 flex h-48 items-center justify-center text-center text-sm text-ink-muted">
           Sin holdings todavía.

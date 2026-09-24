@@ -2,15 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Coins, ArrowLeftRight, Settings, Wallet } from "lucide-react";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: BookOpen },
-  { href: "/portfolio", label: "Portfolio", icon: Wallet },
-  { href: "/cryptocurrencies", label: "Cripto", icon: Coins },
-  { href: "/exchanges", label: "Exchanges", icon: ArrowLeftRight },
-  { href: "/settings", label: "Ajustes", icon: Settings },
-];
+import { NAV_ITEMS } from "./navItems";
 
 export function MobileNav() {
   const pathname = usePathname();

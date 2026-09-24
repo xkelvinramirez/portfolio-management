@@ -9,6 +9,7 @@ import {
   useUpdateCryptoCurrency,
 } from "@/hooks/useCryptoCurrencies";
 import { Button } from "@/components/ui/Button";
+import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { IconButton } from "@/components/ui/IconButton";
 import { RowActions } from "@/components/ui/RowActions";
 import { TextField } from "@/components/ui/TextField";
@@ -17,7 +18,7 @@ import { getApiErrorMessage } from "@/lib/errors";
 import type { CryptoCurrencyResponse } from "@/types";
 
 export default function CryptoCurrenciesPage() {
-  const { data, isPending } = useCryptoCurrencies({ limit: 100 });
+  const { data, isPending, isError, error } = useCryptoCurrencies({ limit: 100 });
   const createMutation = useCreateCryptoCurrency();
   const deleteMutation = useDeleteCryptoCurrency();
 
@@ -47,6 +48,10 @@ export default function CryptoCurrenciesPage() {
       <section className="border border-rule bg-paper">
         {isPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
+        ) : isError ? (
+          <ErrorNotice>
+            {getApiErrorMessage(error) ?? "No se pudieron cargar las criptomonedas."}
+          </ErrorNotice>
         ) : (
           <table className="w-full border-collapse text-sm">
             <thead>

@@ -7,15 +7,24 @@ import {
   usePortfolioHoldings,
   usePortfolioValue,
 } from "@/hooks/usePortfolioAnalytics";
+import Link from "next/link";
 import { useAppStore } from "@/store/useAppStore";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 import { AllocationChart } from "@/components/dashboard/AllocationChart";
+import { buttonClassName } from "@/components/ui/Button";
+import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { HoldingsTable } from "@/components/dashboard/HoldingsTable";
 import { ValueHistoryChart } from "@/components/dashboard/ValueHistoryChart";
 import { formatCurrency } from "@/lib/format";
+import { getApiErrorMessage } from "@/lib/errors";
 
 export default function DashboardPage() {
-  const { data: portfoliosPage, isPending: portfoliosPending } = usePortfolios({ limit: 50 });
+  const {
+    data: portfoliosPage,
+    isPending: portfoliosPending,
+    isError: portfoliosError,
+    error: portfoliosErrorDetail,
+  } = usePortfolios({ limit: 50 });
   const selectedPortfolioId = useAppStore((state) => state.selectedPortfolioId);
   const setSelectedPortfolioId = useAppStore((state) => state.setSelectedPortfolioId);
 
@@ -31,15 +40,27 @@ export default function DashboardPage() {
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
   const { data: value } = usePortfolioValue(activePortfolioId);
-  const { data: history } = usePortfolioHistory(activePortfolioId);
-  const { data: holdingsData, isPending: holdingsPending } = usePortfolioHoldings(
-    activePortfolioId
-  );
+  const { data: history, isError: historyError, error: historyErrorDetail } =
+    usePortfolioHistory(activePortfolioId);
+  const {
+    data: holdingsData,
+    isPending: holdingsPending,
+    isError: holdingsError,
+    error: holdingsErrorDetail,
+  } = usePortfolioHoldings(activePortfolioId);
 
   const holdings = holdingsData?.holdings ?? [];
 
   if (portfoliosPending) {
     return <DashboardSkeleton />;
+  }
+
+  if (portfoliosError) {
+    return (
+      <ErrorNotice>
+        {getApiErrorMessage(portfoliosErrorDetail) ?? "No se pudieron cargar tus portfolios."}
+      </ErrorNotice>
+    );
   }
 
   if (portfolios.length === 0) {
@@ -76,12 +97,26 @@ export default function DashboardPage() {
       <AlertsStrip holdings={holdings} />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <ValueHistoryChart points={history?.points ?? []} currentValue={value?.value ?? 0} />
+        {historyError ? (
+          <div className="border border-rule bg-paper">
+            <ErrorNotice>
+              {getApiErrorMessage(historyErrorDetail) ?? "No se pudo cargar el histórico."}
+            </ErrorNotice>
+          </div>
+        ) : (
+          <ValueHistoryChart points={history?.points ?? []} currentValue={value?.value} />
+        )}
         <AllocationChart portfolioId={activePortfolioId} />
       </div>
 
       {holdingsPending ? (
         <div className="h-40 animate-pulse border border-rule bg-paper-raised" />
+      ) : holdingsError ? (
+        <div className="border border-rule bg-paper">
+          <ErrorNotice>
+            {getApiErrorMessage(holdingsErrorDetail) ?? "No se pudieron cargar los holdings."}
+          </ErrorNotice>
+        </div>
       ) : (
         <HoldingsTable holdings={holdings} />
       )}
@@ -104,11 +139,14 @@ function DashboardSkeleton() {
 
 function EmptyPortfolioState() {
   return (
-    <div className="mx-auto flex max-w-md flex-col items-center gap-2 py-24 text-center">
+    <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-24 text-center">
       <h1 className="text-lg font-semibold">Todavía no tienes un portfolio</h1>
       <p className="text-sm text-ink-muted">
         Crea tu primer portfolio para empezar a registrar holdings y ver tu ledger aquí.
       </p>
+      <Link href="/portfolio" className={buttonClassName() + " mt-1"}>
+        Crear portfolio
+      </Link>
     </div>
   );
 }

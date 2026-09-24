@@ -16,12 +16,12 @@ export function Header() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-rule px-4 py-3 md:px-6">
-      <span className="text-sm font-semibold tracking-tight">Portfolio Ledger</span>
+    <header className="flex items-center justify-between gap-3 border-b border-rule px-4 py-3 md:px-6">
+      <span className="shrink-0 text-sm font-semibold tracking-tight">Portfolio Ledger</span>
       {userEmail && (
-        <span className="flex items-center gap-3">
-          <span className="text-xs text-ink-muted">{userEmail}</span>
-          <IconButton aria-label="Cerrar sesión" onClick={handleLogout}>
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="truncate text-xs text-ink-muted">{userEmail}</span>
+          <IconButton aria-label="Cerrar sesión" onClick={handleLogout} className="shrink-0">
             <LogOut size={16} strokeWidth={1.75} aria-hidden />
           </IconButton>
         </span>

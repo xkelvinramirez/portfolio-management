@@ -13,6 +13,7 @@ import {
   useUpdatePortfolioEntry,
 } from "@/hooks/usePortfolioEntries";
 import { Button } from "@/components/ui/Button";
+import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { IconButton } from "@/components/ui/IconButton";
 import { RowActions } from "@/components/ui/RowActions";
 import { SelectField } from "@/components/ui/SelectField";
@@ -33,13 +34,16 @@ export default function PortfolioDetailPage({
   const { id } = use(params);
   const portfolioId = Number(id);
 
-  const { data: portfolio } = usePortfolio(portfolioId);
-  const { data: entriesPage, isPending: entriesPending } = usePortfolioEntries({
-    portfolioId,
-    limit: 200,
-  });
-  const { data: cryptoPage } = useCryptoCurrencies({ limit: 200 });
-  const { data: exchangePage } = useExchanges({ limit: 200 });
+  const { data: portfolio, isError: portfolioError, error: portfolioErrorDetail } =
+    usePortfolio(portfolioId);
+  const {
+    data: entriesPage,
+    isPending: entriesPending,
+    isError: entriesError,
+    error: entriesErrorDetail,
+  } = usePortfolioEntries({ portfolioId, limit: 200 });
+  const { data: cryptoPage, isError: cryptoError } = useCryptoCurrencies({ limit: 200 });
+  const { data: exchangePage, isError: exchangeError } = useExchanges({ limit: 200 });
 
   const cryptoCurrencies = useMemo(() => cryptoPage?.data ?? [], [cryptoPage]);
   const exchanges = useMemo(() => exchangePage?.data ?? [], [exchangePage]);
@@ -64,7 +68,8 @@ export default function PortfolioDetailPage({
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [recordedAt, setRecordedAt] = useState(todayInputValue());
 
-  const canAddEntry = cryptoCurrencies.length > 0 && exchanges.length > 0;
+  const referenceDataFailed = cryptoError || exchangeError;
+  const canAddEntry = !referenceDataFailed && cryptoCurrencies.length > 0 && exchanges.length > 0;
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -87,6 +92,19 @@ export default function PortfolioDetailPage({
     );
   }
 
+  if (portfolioError) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col gap-3">
+        <Link href="/portfolio" className="text-xs text-ink-muted hover:underline">
+          ← Portfolios
+        </Link>
+        <ErrorNotice>
+          {getApiErrorMessage(portfolioErrorDetail) ?? "No se pudo cargar este portfolio."}
+        </ErrorNotice>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <div>
@@ -102,6 +120,10 @@ export default function PortfolioDetailPage({
       <section className="border border-rule bg-paper">
         {entriesPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
+        ) : entriesError ? (
+          <ErrorNotice>
+            {getApiErrorMessage(entriesErrorDetail) ?? "No se pudieron cargar las entradas."}
+          </ErrorNotice>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse text-sm">
@@ -255,18 +277,24 @@ export default function PortfolioDetailPage({
             {getApiErrorMessage(createMutation.error) ?? "No se pudo añadir la entrada."}
           </p>
         )}
-        {!canAddEntry && (
-          <p className="border-t border-rule px-4 py-3 text-sm text-ink-muted">
-            Necesitas al menos una{" "}
-            <Link href="/cryptocurrencies" className="underline">
-              criptomoneda
-            </Link>{" "}
-            y un{" "}
-            <Link href="/exchanges" className="underline">
-              exchange
-            </Link>{" "}
-            registrados antes de poder añadir una entrada.
-          </p>
+        {referenceDataFailed ? (
+          <ErrorNotice>
+            No se pudieron cargar las criptomonedas o exchanges disponibles.
+          </ErrorNotice>
+        ) : (
+          !canAddEntry && (
+            <p className="border-t border-rule px-4 py-3 text-sm text-ink-muted">
+              Necesitas al menos una{" "}
+              <Link href="/cryptocurrencies" className="underline">
+                criptomoneda
+              </Link>{" "}
+              y un{" "}
+              <Link href="/exchanges" className="underline">
+                exchange
+              </Link>{" "}
+              registrados antes de poder añadir una entrada.
+            </p>
+          )
         )}
       </section>
     </div>

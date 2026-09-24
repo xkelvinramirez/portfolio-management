@@ -27,7 +27,9 @@ const RANGE_DAYS: Record<Range, number | null> = { "30d": 30, "90d": 90, "1y": 3
 
 interface ValueHistoryChartProps {
   points: PortfolioHistoryPointResponse[];
-  currentValue: number;
+  // undefined means "still loading" — must render as "—", never fall back to 0 and
+  // read as a real (and wrong) answer.
+  currentValue: number | undefined;
 }
 
 export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartProps) {
@@ -56,7 +58,11 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
         <div>
           <h2 className="text-xs font-medium tracking-wide text-ink-muted uppercase">Histórico</h2>
           <p className="tabular text-xl font-semibold">
-            {formatCurrency(reading ? reading.value : currentValue)}
+            {reading
+              ? formatCurrency(reading.value)
+              : currentValue !== undefined
+                ? formatCurrency(currentValue)
+                : "—"}
           </p>
           <div className="flex items-center gap-2 text-xs text-ink-muted">
             <span>{reading ? formatDate(reading.date) : "Sin historial todavía"}</span>

@@ -7,6 +7,11 @@ interface SegmentedControlProps<T extends string> {
 
 // Active state uses ink (filled), never the accent — the accent is reserved
 // exclusively for negative values and corrections per the direction contract.
+//
+// role="group" + aria-pressed, not role="radiogroup"/"radio": a real radiogroup
+// requires roving-tabindex arrow-key navigation between options, which these plain
+// buttons don't implement — claiming the ARIA role without the behavior is worse
+// than a plain toggle group.
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -15,7 +20,7 @@ export function SegmentedControl<T extends string>({
 }: SegmentedControlProps<T>) {
   return (
     <div
-      role="radiogroup"
+      role="group"
       aria-label={rest["aria-label"]}
       className="inline-flex items-center gap-0.5 rounded-sm border border-rule bg-paper-raised p-0.5"
     >
@@ -25,14 +30,11 @@ export function SegmentedControl<T extends string>({
           <button
             key={option.value}
             type="button"
-            role="radio"
-            aria-checked={active}
+            aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={
               "rounded-[2px] px-2.5 py-1 text-xs font-medium transition-colors " +
-              (active
-                ? "bg-ink text-paper"
-                : "text-ink-muted hover:text-ink")
+              (active ? "bg-ink text-paper" : "text-ink-muted hover:text-ink")
             }
           >
             {option.label}
