@@ -43,9 +43,7 @@ export const authService = {
 
 // ---------- Portfolios ----------
 
-export interface PortfolioListParams extends ListParams {
-  userId?: number;
-}
+export type PortfolioListParams = ListParams;
 
 export const portfolioService = {
   list: (params: PortfolioListParams = {}) =>

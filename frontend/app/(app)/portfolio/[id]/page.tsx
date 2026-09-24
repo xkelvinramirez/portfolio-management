@@ -41,9 +41,9 @@ export default function PortfolioDetailPage({
     isPending: entriesPending,
     isError: entriesError,
     error: entriesErrorDetail,
-  } = usePortfolioEntries({ portfolioId, limit: 200 });
-  const { data: cryptoPage, isError: cryptoError } = useCryptoCurrencies({ limit: 200 });
-  const { data: exchangePage, isError: exchangeError } = useExchanges({ limit: 200 });
+  } = usePortfolioEntries({ portfolioId, limit: 100 });
+  const { data: cryptoPage, isError: cryptoError } = useCryptoCurrencies({ limit: 100 });
+  const { data: exchangePage, isError: exchangeError } = useExchanges({ limit: 100 });
 
   const cryptoCurrencies = useMemo(() => cryptoPage?.data ?? [], [cryptoPage]);
   const exchanges = useMemo(() => exchangePage?.data ?? [], [exchangePage]);
@@ -67,13 +67,30 @@ export default function PortfolioDetailPage({
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [recordedAt, setRecordedAt] = useState(todayInputValue());
+  const [formError, setFormError] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState(false);
 
   const referenceDataFailed = cryptoError || exchangeError;
   const canAddEntry = !referenceDataFailed && cryptoCurrencies.length > 0 && exchanges.length > 0;
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
-    if (!cryptoCurrencyId || !exchangeId || !quantity || !pricePerUnit) return;
+    setJustAdded(false);
+
+    if (!cryptoCurrencyId || !exchangeId || !quantity || !pricePerUnit || !recordedAt) {
+      setFormError("Completa todos los campos para añadir la entrada.");
+      return;
+    }
+    if (Number(quantity) <= 0 || Number(pricePerUnit) <= 0) {
+      setFormError("La cantidad y el precio deben ser mayores que cero.");
+      return;
+    }
+    if (recordedAt > todayInputValue()) {
+      setFormError("La fecha no puede ser futura.");
+      return;
+    }
+
+    setFormError(null);
     createMutation.mutate(
       {
         portfolioId,
@@ -85,8 +102,12 @@ export default function PortfolioDetailPage({
       },
       {
         onSuccess: () => {
+          setCryptoCurrencyId("");
+          setExchangeId("");
           setQuantity("");
           setPricePerUnit("");
+          setRecordedAt(todayInputValue());
+          setJustAdded(true);
         },
       }
     );
@@ -264,6 +285,7 @@ export default function PortfolioDetailPage({
               type="date"
               value={recordedAt}
               onChange={(e) => setRecordedAt(e.target.value)}
+              max={todayInputValue()}
               required
               className="w-36"
             />
@@ -272,9 +294,19 @@ export default function PortfolioDetailPage({
             </Button>
           </form>
         ) : null}
+        {formError && (
+          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+            {formError}
+          </p>
+        )}
         {createMutation.isError && (
           <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo añadir la entrada."}
+          </p>
+        )}
+        {justAdded && !createMutation.isError && (
+          <p className="border-t border-rule px-4 py-2 text-sm text-ink-muted">
+            Entrada añadida correctamente.
           </p>
         )}
         {referenceDataFailed ? (

@@ -96,7 +96,7 @@ export default function DashboardPage() {
 
       <AlertsStrip holdings={holdings} />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-[7fr_3fr]">
         {historyError ? (
           <div className="border border-rule bg-paper">
             <ErrorNotice>
@@ -104,7 +104,11 @@ export default function DashboardPage() {
             </ErrorNotice>
           </div>
         ) : (
-          <ValueHistoryChart points={history?.points ?? []} currentValue={value?.value} />
+          <ValueHistoryChart
+            points={history?.points ?? []}
+            byAsset={history?.byAsset ?? []}
+            currentValue={value?.value}
+          />
         )}
         <AllocationChart portfolioId={activePortfolioId} />
       </div>
@@ -128,7 +132,7 @@ function DashboardSkeleton() {
   return (
     <div className="mx-auto flex max-w-6xl animate-pulse flex-col gap-6" aria-busy="true">
       <div className="h-16 w-64 bg-paper-raised" />
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-[7fr_3fr]">
         <div className="h-56 border border-rule bg-paper-raised" />
         <div className="h-56 border border-rule bg-paper-raised" />
       </div>

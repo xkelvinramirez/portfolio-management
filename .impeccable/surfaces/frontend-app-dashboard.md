@@ -1,13 +1,13 @@
 ---
 version: 1
 slug: "frontend-app-dashboard"
-primary_target: "frontend/app/dashboard"
+primary_target: "frontend/app/(app)/dashboard"
 related_targets: []
 ---
 
 ## Scope and visitor mode
 
-Operate. Route: `frontend/app/dashboard`. First surface of a new visual world (no prior DESIGN.md or implementation).
+Operate. Route: `frontend/app/(app)/dashboard`. First surface of a new visual world (no prior DESIGN.md or implementation).
 
 ## Audience, job, action, proof
 

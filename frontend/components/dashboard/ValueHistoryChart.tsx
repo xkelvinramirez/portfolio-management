@@ -12,7 +12,8 @@ import {
 } from "recharts";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatCurrency, formatDate, formatShortDate } from "@/lib/format";
-import type { PortfolioHistoryPointResponse } from "@/types";
+import { colorForKey } from "@/lib/chartColors";
+import type { PortfolioAssetHistorySeriesResponse, PortfolioHistoryPointResponse } from "@/types";
 
 type Range = "30d" | "90d" | "1y" | "all";
 
@@ -25,16 +26,23 @@ const RANGE_OPTIONS: { value: Range; label: string }[] = [
 
 const RANGE_DAYS: Record<Range, number | null> = { "30d": 30, "90d": 90, "1y": 365, all: null };
 
+interface MergedPoint {
+  date: string;
+  value: number;
+  byAsset: Record<string, number>;
+}
+
 interface ValueHistoryChartProps {
   points: PortfolioHistoryPointResponse[];
+  byAsset: PortfolioAssetHistorySeriesResponse[];
   // undefined means "still loading" — must render as "—", never fall back to 0 and
   // read as a real (and wrong) answer.
   currentValue: number | undefined;
 }
 
-export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartProps) {
+export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistoryChartProps) {
   const [range, setRange] = useState<Range>("90d");
-  const [hovered, setHovered] = useState<PortfolioHistoryPointResponse | null>(null);
+  const [hovered, setHovered] = useState<MergedPoint | null>(null);
 
   // Date.now() is impure and must not run directly during render (it would also bake
   // a build-time value into the prerendered HTML and mismatch on hydration); a lazy
@@ -48,9 +56,35 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
     return points.filter((p) => new Date(p.date).getTime() >= cutoff);
   }, [points, range, now]);
 
-  const reading = hovered ?? filtered[filtered.length - 1] ?? null;
-  const delta =
-    filtered.length >= 2 ? filtered[filtered.length - 1].value - filtered[0].value : null;
+  // Multiple lines only earn their place once there's more than one asset to tell
+  // apart — a single asset's line is identical to the total and would just double it.
+  const showAssetLines = byAsset.length > 1;
+
+  const merged = useMemo<MergedPoint[]>(() => {
+    if (!showAssetLines) return filtered.map((p) => ({ date: p.date, value: p.value, byAsset: {} }));
+    const byDate = byAsset.map((series) => ({
+      symbol: series.symbol,
+      values: new Map(series.points.map((p) => [p.date, p.value])),
+    }));
+    return filtered.map((p) => ({
+      date: p.date,
+      value: p.value,
+      byAsset: Object.fromEntries(byDate.map((s) => [s.symbol, s.values.get(p.date) ?? 0])),
+    }));
+  }, [filtered, byAsset, showAssetLines]);
+
+  const reading = hovered ?? merged[merged.length - 1] ?? null;
+  const delta = merged.length >= 2 ? merged[merged.length - 1].value - merged[0].value : null;
+
+  const legend = useMemo(
+    () =>
+      showAssetLines
+        ? [...byAsset]
+            .map((series) => ({ symbol: series.symbol, color: colorForKey(series.symbol) }))
+            .sort((a, b) => a.symbol.localeCompare(b.symbol))
+        : [],
+    [byAsset, showAssetLines]
+  );
 
   return (
     <section className="border border-rule bg-paper p-4" aria-label="Histórico de valor">
@@ -83,14 +117,13 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
       </div>
 
       <div className="mt-4 h-48">
-        {filtered.length > 1 ? (
+        {merged.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={filtered}
+              data={merged}
               onMouseMove={(state: unknown) => {
-                const activePayload = (
-                  state as { activePayload?: { payload: PortfolioHistoryPointResponse }[] }
-                )?.activePayload;
+                const activePayload = (state as { activePayload?: { payload: MergedPoint }[] })
+                  ?.activePayload;
                 setHovered(activePayload?.[0]?.payload ?? null);
               }}
               onMouseLeave={() => setHovered(null)}
@@ -107,7 +140,40 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
                 minTickGap={24}
               />
               <YAxis hide domain={["auto", "auto"]} />
-              <Tooltip content={() => null} cursor={{ stroke: "var(--ink)", strokeWidth: 1 }} />
+              {showAssetLines ? (
+                <Tooltip
+                  cursor={{ stroke: "var(--ink)", strokeWidth: 1 }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const row = payload[0].payload as MergedPoint;
+                    const breakdown = legend
+                      .map((entry) => ({ ...entry, value: row.byAsset[entry.symbol] ?? 0 }))
+                      .filter((entry) => entry.value > 0)
+                      .sort((a, b) => b.value - a.value);
+                    if (breakdown.length === 0) return null;
+                    return (
+                      <div className="border border-rule bg-paper px-2.5 py-2 text-xs">
+                        <p className="mb-1 text-ink-muted">{formatDate(row.date)}</p>
+                        <ul className="space-y-0.5">
+                          {breakdown.map((entry) => (
+                            <li key={entry.symbol} className="flex items-center gap-2">
+                              <span
+                                aria-hidden
+                                className="h-0.5 w-2.5 shrink-0"
+                                style={{ background: entry.color }}
+                              />
+                              <span className="flex-1">{entry.symbol}</span>
+                              <span className="tabular">{formatCurrency(entry.value)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  }}
+                />
+              ) : (
+                <Tooltip content={() => null} cursor={{ stroke: "var(--ink)", strokeWidth: 1 }} />
+              )}
               <Line
                 type="monotone"
                 dataKey="value"
@@ -117,6 +183,19 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
                 activeDot={{ r: 3, fill: "var(--ink)", stroke: "none" }}
                 isAnimationActive={false}
               />
+              {legend.map((entry) => (
+                <Line
+                  key={entry.symbol}
+                  type="monotone"
+                  name={entry.symbol}
+                  dataKey={(row: MergedPoint) => row.byAsset[entry.symbol]}
+                  stroke={entry.color}
+                  strokeWidth={1}
+                  dot={false}
+                  activeDot={{ r: 2.5, fill: entry.color, stroke: "none" }}
+                  isAnimationActive={false}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -125,6 +204,21 @@ export function ValueHistoryChart({ points, currentValue }: ValueHistoryChartPro
           </p>
         )}
       </div>
+
+      {legend.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-rule pt-2.5 text-xs text-ink-muted">
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="h-0.5 w-2.5 shrink-0 bg-ink" />
+            Total
+          </li>
+          {legend.map((entry) => (
+            <li key={entry.symbol} className="flex items-center gap-1.5">
+              <span aria-hidden className="h-0.5 w-2.5 shrink-0" style={{ background: entry.color }} />
+              {entry.symbol}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

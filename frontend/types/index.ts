@@ -90,7 +90,6 @@ export interface PortfolioResponse {
 }
 
 export interface CreatePortfolioRequest {
-  userId: number;
   name: string;
   description: string;
 }
@@ -147,9 +146,16 @@ export interface PortfolioHistoryPointResponse {
   value: number;
 }
 
+export interface PortfolioAssetHistorySeriesResponse {
+  cryptoCurrencyId: number;
+  symbol: string;
+  points: PortfolioHistoryPointResponse[];
+}
+
 export interface PortfolioHistoryResponse {
   portfolioId: number;
   points: PortfolioHistoryPointResponse[];
+  byAsset: PortfolioAssetHistorySeriesResponse[];
 }
 
 export interface PortfolioHoldingItemResponse {

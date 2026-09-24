@@ -3,7 +3,6 @@
 import { type FormEvent, useState } from "react";
 import Link from "next/link";
 import { useCreatePortfolio, useDeletePortfolio, usePortfolios } from "@/hooks/usePortfolios";
-import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/Button";
 import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { RowActions } from "@/components/ui/RowActions";
@@ -12,11 +11,7 @@ import { formatDate } from "@/lib/format";
 import { getApiErrorMessage } from "@/lib/errors";
 
 export default function PortfolioListPage() {
-  const userId = useAppStore((state) => state.userId);
-  const { data, isPending, isError, error } = usePortfolios({
-    limit: 100,
-    userId: userId ?? undefined,
-  });
+  const { data, isPending, isError, error } = usePortfolios({ limit: 100 });
   const createMutation = useCreatePortfolio();
   const deleteMutation = useDeletePortfolio();
 
@@ -26,9 +21,9 @@ export default function PortfolioListPage() {
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !userId) return;
+    if (!name.trim()) return;
     createMutation.mutate(
-      { userId, name: name.trim(), description: description.trim() },
+      { name: name.trim(), description: description.trim() },
       { onSuccess: () => { setName(""); setDescription(""); } }
     );
   }
@@ -113,18 +108,13 @@ export default function PortfolioListPage() {
             placeholder="Opcional"
             className="w-64"
           />
-          <Button type="submit" disabled={createMutation.isPending || !userId}>
+          <Button type="submit" disabled={createMutation.isPending}>
             {createMutation.isPending ? "Creando…" : "Crear portfolio"}
           </Button>
         </form>
         {createMutation.isError && (
           <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo crear el portfolio."}
-          </p>
-        )}
-        {!userId && (
-          <p className="border-t border-rule px-4 py-2 text-xs text-ink-muted">
-            Inicia sesión para poder crear un portfolio.
           </p>
         )}
       </section>

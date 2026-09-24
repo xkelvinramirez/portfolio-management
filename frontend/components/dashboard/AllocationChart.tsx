@@ -8,6 +8,7 @@ import { usePortfolioAllocation } from "@/hooks/usePortfolioAnalytics";
 import { PortfolioAllocationGroupBy } from "@/types";
 import { formatCurrency, formatPercentage } from "@/lib/format";
 import { getApiErrorMessage } from "@/lib/errors";
+import { colorForKey } from "@/lib/chartColors";
 
 type GroupBy = "asset" | "exchange";
 
@@ -15,10 +16,6 @@ const GROUP_OPTIONS: { value: GroupBy; label: string }[] = [
   { value: "asset", label: "Activo" },
   { value: "exchange", label: "Exchange" },
 ];
-
-// One hue family at varying value, not a rainbow — the chart reads as one ledger,
-// consistent with the single-accent discipline (red stays reserved for negatives).
-const SLICE_COLORS = ["#211d17", "#4a4336", "#6f6555", "#948a75", "#b9ae95", "#ddd3ba"];
 
 interface AllocationChartProps {
   portfolioId: number;
@@ -73,8 +70,8 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
                   strokeWidth={2}
                   isAnimationActive={false}
                 >
-                  {items.map((item, index) => (
-                    <Cell key={item.groupId} fill={SLICE_COLORS[index % SLICE_COLORS.length]} />
+                  {items.map((item) => (
+                    <Cell key={item.groupId} fill={colorForKey(item.label)} />
                   ))}
                 </Pie>
                 <Tooltip
@@ -90,13 +87,13 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
             </ResponsiveContainer>
           </div>
           <ul className="min-w-0 flex-1 space-y-1.5 text-sm">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <li key={item.groupId} className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
                     aria-hidden
                     className="size-2 shrink-0 rounded-full"
-                    style={{ background: SLICE_COLORS[index % SLICE_COLORS.length] }}
+                    style={{ background: colorForKey(item.label) }}
                   />
                   <span className="truncate">{item.label}</span>
                 </span>
