@@ -1,0 +1,44 @@
+interface SegmentedControlProps<T extends string> {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  "aria-label": string;
+}
+
+// Active state uses ink (filled), never the accent — the accent is reserved
+// exclusively for negative values and corrections per the direction contract.
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  ...rest
+}: SegmentedControlProps<T>) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={rest["aria-label"]}
+      className="inline-flex items-center gap-0.5 rounded-sm border border-rule bg-paper-raised p-0.5"
+    >
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(option.value)}
+            className={
+              "rounded-[2px] px-2.5 py-1 text-xs font-medium transition-colors " +
+              (active
+                ? "bg-ink text-paper"
+                : "text-ink-muted hover:text-ink")
+            }
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

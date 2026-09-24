@@ -1,26 +1,56 @@
 @import "tailwindcss";
 
+/*
+  "Ledger columnar" world (.impeccable/surfaces/frontend-app-dashboard.md):
+  warm paper ground, near-black ink, one committed accent reserved exclusively
+  for negative movement and corrections. No green for gains — gains stay in
+  plain ink, which is the point: this refuses the trading-terminal default.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f6f1e4;
+  --paper-raised: #efe7d3;
+  --ink: #211d17;
+  --ink-muted: #5b5346;
+  --rule: #ddd3ba;
+  --rule-strong: #c4b89c;
+  --accent: #8b2e2e;
+  --accent-soft: #f1e0da;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--rule-strong) var(--paper);
+}
+
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
