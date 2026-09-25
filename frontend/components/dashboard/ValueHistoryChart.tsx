@@ -140,40 +140,38 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
                 minTickGap={24}
               />
               <YAxis hide domain={["auto", "auto"]} />
-              {showAssetLines ? (
-                <Tooltip
-                  cursor={{ stroke: "var(--ink)", strokeWidth: 1 }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const row = payload[0].payload as MergedPoint;
-                    const breakdown = legend
-                      .map((entry) => ({ ...entry, value: row.byAsset[entry.symbol] ?? 0 }))
-                      .filter((entry) => entry.value > 0)
-                      .sort((a, b) => b.value - a.value);
-                    if (breakdown.length === 0) return null;
-                    return (
-                      <div className="border border-rule bg-paper px-2.5 py-2 text-xs">
-                        <p className="mb-1 text-ink-muted">{formatDate(row.date)}</p>
-                        <ul className="space-y-0.5">
-                          {breakdown.map((entry) => (
-                            <li key={entry.symbol} className="flex items-center gap-2">
-                              <span
-                                aria-hidden
-                                className="h-0.5 w-2.5 shrink-0"
-                                style={{ background: entry.color }}
-                              />
-                              <span className="flex-1">{entry.symbol}</span>
-                              <span className="tabular">{formatCurrency(entry.value)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  }}
-                />
-              ) : (
-                <Tooltip content={() => null} cursor={{ stroke: "var(--ink)", strokeWidth: 1 }} />
-              )}
+              <Tooltip
+                cursor={{ stroke: "var(--ink)", strokeWidth: 1 }}
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0].payload as MergedPoint;
+                  const breakdown = legend
+                    .map((entry) => ({ ...entry, value: row.byAsset[entry.symbol] ?? 0 }))
+                    .filter((entry) => entry.value > 0)
+                    .sort((a, b) => b.value - a.value);
+                  // Nothing to break down for a single-asset portfolio (no `legend`) —
+                  // the header reading above already covers the total.
+                  if (breakdown.length === 0) return null;
+                  return (
+                    <div className="border border-rule bg-paper px-2.5 py-2 text-xs">
+                      <p className="mb-1 text-ink-muted">{formatDate(row.date)}</p>
+                      <ul className="space-y-0.5">
+                        {breakdown.map((entry) => (
+                          <li key={entry.symbol} className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className="h-0.5 w-2.5 shrink-0"
+                              style={{ background: entry.color }}
+                            />
+                            <span className="flex-1">{entry.symbol}</span>
+                            <span className="tabular">{formatCurrency(entry.value)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }}
+              />
               <Line
                 type="monotone"
                 dataKey="value"

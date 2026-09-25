@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GuestGuard } from "@/components/layout/GuestGuard";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useLogin } from "@/hooks/useAuth";
@@ -30,7 +31,8 @@ function LoginForm() {
   return (
     <div className="flex min-h-full flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm border border-rule bg-paper p-6">
-        <h1 className="text-lg font-semibold tracking-tight">Portfolio Ledger</h1>
+        <BrandMark size={28} />
+        <h1 className="mt-3 text-lg font-semibold tracking-tight">Portfolio Ledger</h1>
         <p className="mt-1 text-sm text-ink-muted">Inicia sesión para ver tu registro.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

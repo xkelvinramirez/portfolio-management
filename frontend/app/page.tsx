@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function RootPage() {
@@ -14,5 +15,5 @@ export default function RootPage() {
     router.replace(token ? "/dashboard" : "/login");
   }, [hasHydrated, token, router]);
 
-  return null;
+  return <LoadingScreen />;
 }

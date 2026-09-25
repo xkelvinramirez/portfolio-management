@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { usePortfolios } from "@/hooks/usePortfolios";
-import {
-  usePortfolioHistory,
-  usePortfolioHoldings,
-  usePortfolioValue,
-} from "@/hooks/usePortfolioAnalytics";
+import { usePortfolioHistory, usePortfolioHoldings } from "@/hooks/usePortfolioAnalytics";
 import Link from "next/link";
 import { useAppStore } from "@/store/useAppStore";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
@@ -39,7 +35,6 @@ export default function DashboardPage() {
   const activePortfolioId = selectedPortfolioId ?? portfolios[0]?.id ?? 0;
   const activePortfolio = portfolios.find((p) => p.id === activePortfolioId);
 
-  const { data: value } = usePortfolioValue(activePortfolioId);
   const { data: history, isError: historyError, error: historyErrorDetail } =
     usePortfolioHistory(activePortfolioId);
   const {
@@ -50,6 +45,10 @@ export default function DashboardPage() {
   } = usePortfolioHoldings(activePortfolioId);
 
   const holdings = holdingsData?.holdings ?? [];
+  // No live feed and no price movement between entries (product principle: manual
+  // entry is the source of truth) — the latest history point IS the current value,
+  // so there's no need for a second endpoint call to fetch it separately.
+  const currentValue = history?.points.at(-1)?.value;
 
   if (portfoliosPending) {
     return <DashboardSkeleton />;
@@ -90,7 +89,7 @@ export default function DashboardPage() {
           {activePortfolio?.name ?? "Portfolio"}
         </h1>
         <p className="tabular text-3xl font-semibold">
-          {value ? formatCurrency(value.value) : "—"}
+          {currentValue !== undefined ? formatCurrency(currentValue) : "—"}
         </p>
       </div>
 
@@ -107,7 +106,7 @@ export default function DashboardPage() {
           <ValueHistoryChart
             points={history?.points ?? []}
             byAsset={history?.byAsset ?? []}
-            currentValue={value?.value}
+            currentValue={currentValue}
           />
         )}
         <AllocationChart portfolioId={activePortfolioId} />

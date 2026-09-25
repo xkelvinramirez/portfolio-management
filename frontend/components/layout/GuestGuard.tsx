@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
+import { LoadingScreen } from "./LoadingScreen";
 
 // Wraps /login and /register — sends an already-authenticated visitor straight to the
 // dashboard instead of showing them a login form again.
@@ -18,7 +19,7 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
   }, [hasHydrated, token, router]);
 
   if (!hasHydrated || token) {
-    return null;
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;

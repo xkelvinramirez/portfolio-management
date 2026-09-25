@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
+import { LoadingScreen } from "./LoadingScreen";
 
 // Wraps every route under app/(app) — redirects to /login once we know (post-hydration)
 // that there is no session. Axios's own 401 interceptor is the fallback for a token
@@ -19,7 +20,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [hasHydrated, token, router]);
 
   if (!hasHydrated || !token) {
-    return null;
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;
