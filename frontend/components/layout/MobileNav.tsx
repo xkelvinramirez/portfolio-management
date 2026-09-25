@@ -10,7 +10,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="flex overflow-x-auto border-b border-rule bg-paper-raised px-2 md:hidden"
+      className="flex overflow-x-auto bg-paper px-2 shadow-[0_1px_0_rgba(16,24,40,0.06)] md:hidden"
     >
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname?.startsWith(`${href}/`);
@@ -22,7 +22,7 @@ export function MobileNav() {
             className={
               "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs whitespace-nowrap transition-colors " +
               (active
-                ? "border-ink text-ink font-medium"
+                ? "border-brand text-brand font-semibold"
                 : "border-transparent text-ink-muted")
             }
           >

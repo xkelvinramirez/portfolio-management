@@ -31,13 +31,13 @@ export default function PortfolioListPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Portfolios</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Portfolios</h1>
         <p className="text-sm text-ink-muted">
           Cada portfolio lleva su propio registro de entradas por activo, exchange y fecha.
         </p>
       </div>
 
-      <section className="border border-rule bg-paper">
+      <section className="panel overflow-hidden">
         {isPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
         ) : isError ? (
@@ -113,7 +113,7 @@ export default function PortfolioListPage() {
           </Button>
         </form>
         {createMutation.isError && (
-          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+          <p role="alert" className="border-t border-rule bg-accent-soft px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo crear el portfolio."}
           </p>
         )}

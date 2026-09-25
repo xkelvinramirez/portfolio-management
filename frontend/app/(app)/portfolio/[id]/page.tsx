@@ -132,13 +132,13 @@ export default function PortfolioDetailPage({
         <Link href="/portfolio" className="text-xs text-ink-muted hover:underline">
           ← Portfolios
         </Link>
-        <h1 className="text-xl font-semibold tracking-tight">{portfolio?.name ?? "Portfolio"}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{portfolio?.name ?? "Portfolio"}</h1>
         {portfolio?.description && (
           <p className="text-sm text-ink-muted">{portfolio.description}</p>
         )}
       </div>
 
-      <section className="border border-rule bg-paper">
+      <section className="panel overflow-hidden">
         {entriesPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
         ) : entriesError ? (
@@ -295,17 +295,17 @@ export default function PortfolioDetailPage({
           </form>
         ) : null}
         {formError && (
-          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+          <p role="alert" className="border-t border-rule bg-accent-soft px-4 py-2 text-sm text-accent">
             {formError}
           </p>
         )}
         {createMutation.isError && (
-          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+          <p role="alert" className="border-t border-rule bg-accent-soft px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo añadir la entrada."}
           </p>
         )}
         {justAdded && !createMutation.isError && (
-          <p className="border-t border-rule px-4 py-2 text-sm text-ink-muted">
+          <p className="border-t border-rule bg-brand-soft px-4 py-2 text-sm text-brand">
             Entrada añadida correctamente.
           </p>
         )}
@@ -368,7 +368,7 @@ function EditEntryRow({
   }
 
   const inputClassName =
-    "w-full border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ink";
+    "w-full rounded-lg border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-brand";
 
   return (
     <tr className="border-b border-rule bg-paper-raised last:border-0">

@@ -46,14 +46,14 @@ export default function ExchangesPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Exchanges</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Exchanges</h1>
         <p className="text-sm text-ink-muted">
           Los exchanges donde mantienes holdings. La API key es obligatoria por ahora, pero
           queda reservada — hoy no hay sincronización automática de precios.
         </p>
       </div>
 
-      <section className="border border-rule bg-paper">
+      <section className="panel overflow-hidden">
         {isPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
         ) : isError ? (
@@ -144,7 +144,7 @@ export default function ExchangesPage() {
           </Button>
         </form>
         {createMutation.isError && (
-          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+          <p role="alert" className="border-t border-rule bg-accent-soft px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo añadir el exchange."}
           </p>
         )}
@@ -169,14 +169,14 @@ function EditRow({ item, onDone }: { item: ExchangeResponse; onDone: () => void 
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ink"
+          className="w-full rounded-lg border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-brand"
         />
       </td>
       <td className="px-4 py-2">
         <input
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          className="w-full border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ink"
+          className="w-full rounded-lg border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-brand"
         />
       </td>
       <td className="px-4 py-2 text-ink-muted">{formatDate(item.createdAt)}</td>

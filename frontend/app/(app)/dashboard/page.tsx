@@ -75,7 +75,7 @@ export default function DashboardPage() {
             <select
               value={activePortfolioId}
               onChange={(e) => setSelectedPortfolioId(Number(e.target.value))}
-              className="ml-2 border border-rule bg-paper px-1.5 py-0.5 text-ink"
+              className="ml-2 rounded-lg border border-rule bg-paper px-2 py-1 text-ink"
             >
               {portfolios.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -85,10 +85,10 @@ export default function DashboardPage() {
             </select>
           </label>
         )}
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight">
           {activePortfolio?.name ?? "Portfolio"}
         </h1>
-        <p className="tabular text-3xl font-semibold">
+        <p className="tabular text-4xl font-extrabold">
           {currentValue !== undefined ? formatCurrency(currentValue) : "—"}
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-[7fr_3fr]">
         {historyError ? (
-          <div className="border border-rule bg-paper">
+          <div className="panel p-1">
             <ErrorNotice>
               {getApiErrorMessage(historyErrorDetail) ?? "No se pudo cargar el histórico."}
             </ErrorNotice>
@@ -113,9 +113,9 @@ export default function DashboardPage() {
       </div>
 
       {holdingsPending ? (
-        <div className="h-40 animate-pulse border border-rule bg-paper-raised" />
+        <div className="h-40 animate-pulse rounded-2xl bg-paper-raised" />
       ) : holdingsError ? (
-        <div className="border border-rule bg-paper">
+        <div className="panel p-1">
           <ErrorNotice>
             {getApiErrorMessage(holdingsErrorDetail) ?? "No se pudieron cargar los holdings."}
           </ErrorNotice>
@@ -130,12 +130,12 @@ export default function DashboardPage() {
 function DashboardSkeleton() {
   return (
     <div className="mx-auto flex max-w-6xl animate-pulse flex-col gap-6" aria-busy="true">
-      <div className="h-16 w-64 bg-paper-raised" />
+      <div className="h-16 w-64 rounded-2xl bg-paper-raised" />
       <div className="grid gap-6 md:grid-cols-[7fr_3fr]">
-        <div className="h-56 border border-rule bg-paper-raised" />
-        <div className="h-56 border border-rule bg-paper-raised" />
+        <div className="h-56 rounded-2xl bg-paper-raised" />
+        <div className="h-56 rounded-2xl bg-paper-raised" />
       </div>
-      <div className="h-64 border border-rule bg-paper-raised" />
+      <div className="h-64 rounded-2xl bg-paper-raised" />
     </div>
   );
 }
@@ -143,7 +143,7 @@ function DashboardSkeleton() {
 function EmptyPortfolioState() {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-24 text-center">
-      <h1 className="text-lg font-semibold">Todavía no tienes un portfolio</h1>
+      <h1 className="text-xl font-bold">Todavía no tienes un portfolio</h1>
       <p className="text-sm text-ink-muted">
         Crea tu primer portfolio para empezar a registrar holdings y ver tu ledger aquí.
       </p>

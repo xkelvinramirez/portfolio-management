@@ -13,7 +13,7 @@ export function SelectField({ label, id, name, className, children, ...rest }: S
         id={inputId}
         name={name}
         className={
-          "border border-rule bg-paper px-2.5 py-1.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-ink " +
+          "rounded-lg border border-rule bg-paper px-3 py-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-brand " +
           (className ?? "")
         }
         {...rest}

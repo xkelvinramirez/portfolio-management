@@ -39,13 +39,13 @@ export default function CryptoCurrenciesPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Criptomonedas</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Criptomonedas</h1>
         <p className="text-sm text-ink-muted">
           Catálogo de activos disponibles para registrar en tus portfolios.
         </p>
       </div>
 
-      <section className="border border-rule bg-paper">
+      <section className="panel overflow-hidden">
         {isPending ? (
           <div className="h-32 animate-pulse bg-paper-raised" />
         ) : isError ? (
@@ -125,7 +125,7 @@ export default function CryptoCurrenciesPage() {
           </Button>
         </form>
         {createMutation.isError && (
-          <p role="alert" className="border-t border-rule px-4 py-2 text-sm text-accent">
+          <p role="alert" className="border-t border-rule bg-accent-soft px-4 py-2 text-sm text-accent">
             {getApiErrorMessage(createMutation.error) ?? "No se pudo añadir la criptomoneda."}
           </p>
         )}
@@ -159,14 +159,14 @@ function EditRow({
         <input
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          className="w-full border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ink"
+          className="w-full rounded-lg border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-brand"
         />
       </td>
       <td className="px-4 py-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-ink"
+          className="w-full rounded-lg border border-rule bg-paper px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-brand"
         />
       </td>
       <td className="px-4 py-2 text-ink-muted">{formatDate(item.createdAt)}</td>

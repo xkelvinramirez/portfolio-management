@@ -1,13 +1,13 @@
-// Distinct muted hues (not the ledger's sepia monochrome) so each asset reads apart
-// at a glance across the history lines and the allocation slices. Deliberately clear
-// of true red, which stays reserved exclusively for negative movement.
+// A vivid categorical palette so each asset reads apart at a glance across the
+// history lines and the allocation slices. Deliberately clear of true red,
+// which stays reserved exclusively for negative movement.
 export const CHART_COLORS = [
-  "#2a5a8c", // indigo blue
-  "#2f7a5f", // teal green
-  "#a9781f", // ochre gold
-  "#6b3f8c", // plum violet
-  "#3f6b6b", // slate teal
-  "#7a4a2a", // umber brown
+  "#4f46e5", // indigo (brand)
+  "#06b6d4", // cyan
+  "#f59e0b", // amber
+  "#f43f5e", // rose
+  "#10b981", // emerald
+  "#8b5cf6", // violet
 ];
 
 // Hashes a stable key (e.g. a crypto symbol) to a palette color so the same asset

@@ -31,11 +31,9 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
   const items = data?.items ?? [];
 
   return (
-    <section className="border border-rule bg-paper p-4" aria-label="Participación por activo o exchange">
+    <section className="panel p-6" aria-label="Participación por activo o exchange">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-xs font-medium tracking-wide text-ink-muted uppercase">
-          Participación
-        </h2>
+        <h2 className="text-sm font-bold">Participación</h2>
         <SegmentedControl
           aria-label="Agrupar participación por"
           options={GROUP_OPTIONS}
@@ -45,7 +43,7 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
       </div>
 
       {isPending ? (
-        <div className="mt-4 h-48 animate-pulse bg-paper-raised" />
+        <div className="mt-4 h-48 animate-pulse rounded-xl bg-paper-raised" />
       ) : isError ? (
         <div className="mt-4">
           <ErrorNotice>{getApiErrorMessage(error) ?? "No se pudo cargar la participación."}</ErrorNotice>
@@ -79,7 +77,8 @@ export function AllocationChart({ portfolioId }: AllocationChartProps) {
                   contentStyle={{
                     background: "var(--paper)",
                     border: "1px solid var(--rule)",
-                    borderRadius: 0,
+                    borderRadius: 10,
+                    boxShadow: "var(--shadow-card)",
                     fontSize: 12,
                   }}
                 />

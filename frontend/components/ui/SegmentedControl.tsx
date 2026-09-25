@@ -5,8 +5,9 @@ interface SegmentedControlProps<T extends string> {
   "aria-label": string;
 }
 
-// Active state uses ink (filled), never the accent — the accent is reserved
-// exclusively for negative values and corrections per the direction contract.
+// Active state is a lifted white pill on the gray track (shadow, not a fill
+// color) — the accent stays reserved exclusively for negative values and
+// corrections per the direction contract.
 //
 // role="group" + aria-pressed, not role="radiogroup"/"radio": a real radiogroup
 // requires roving-tabindex arrow-key navigation between options, which these plain
@@ -22,7 +23,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="group"
       aria-label={rest["aria-label"]}
-      className="inline-flex items-center gap-0.5 rounded-sm border border-rule bg-paper-raised p-0.5"
+      className="inline-flex items-center gap-0.5 rounded-lg bg-paper-raised p-0.5"
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -33,8 +34,8 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={
-              "rounded-[2px] px-2.5 py-1 text-xs font-medium transition-colors " +
-              (active ? "bg-ink text-paper" : "text-ink-muted hover:text-ink")
+              "rounded-md px-2.5 py-1 text-xs font-semibold transition-colors " +
+              (active ? "bg-paper text-ink shadow-sm" : "text-ink-muted hover:text-ink")
             }
           >
             {option.label}

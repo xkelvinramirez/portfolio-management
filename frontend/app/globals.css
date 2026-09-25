@@ -1,23 +1,30 @@
 @import "tailwindcss";
 
 /*
-  "Ledger columnar" world (.impeccable/surfaces/frontend-app-dashboard.md):
-  warm paper ground, near-black ink, one committed accent reserved exclusively
-  for negative movement and corrections. No green for gains — gains stay in
-  plain ink, which is the point: this refuses the trading-terminal default.
+  "Fintech" world: neutral cool-gray shell, white elevated cards (shadow, not
+  hairline rules), one indigo brand color for actions/active state, and a
+  categorical palette (frontend/lib/chartColors.ts) for per-asset chart data.
+  Red stays reserved exclusively for negative movement and corrections — no
+  green for gains, which is the one rule carried over from the prior ledger
+  world.
 */
 :root {
-  --paper: #f6f1e4;
-  --paper-raised: #efe7d3;
-  --ink: #211d17;
-  --ink-muted: #5b5346;
-  --rule: #ddd3ba;
-  --rule-strong: #c4b89c;
-  --accent: #8b2e2e;
-  --accent-soft: #f1e0da;
+  --page: #f5f6fa;
+  --paper: #ffffff;
+  --paper-raised: #f8f9fb;
+  --ink: #111827;
+  --ink-muted: #6b7280;
+  --rule: #e5e7eb;
+  --rule-strong: #d1d5db;
+  --accent: #dc2626;
+  --accent-soft: #fee2e2;
+  --brand: #4f46e5;
+  --brand-soft: #eef2ff;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.06);
 }
 
 @theme inline {
+  --color-page: var(--page);
   --color-paper: var(--paper);
   --color-paper-raised: var(--paper-raised);
   --color-ink: var(--ink);
@@ -26,31 +33,43 @@
   --color-rule-strong: var(--rule-strong);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--paper);
+  background: var(--page);
   color: var(--ink);
 }
 
 ::selection {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--brand);
+  color: #ffffff;
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
 * {
-  scrollbar-color: var(--rule-strong) var(--paper);
+  scrollbar-color: var(--rule-strong) var(--page);
 }
 
 .tabular {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+/* Elevated white surface: cards, panels, table sections. Shadow carries the
+   elevation — no hairline border alongside it (that combination is the
+   "ghost card" look the prior hairline-ledger world deliberately avoided
+   too; this world just uses shadow instead of a rule for the same job). */
+.panel {
+  background: var(--paper);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
 }

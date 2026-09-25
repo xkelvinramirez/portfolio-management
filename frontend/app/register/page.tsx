@@ -37,9 +37,9 @@ function RegisterForm() {
   if (done) {
     return (
       <div className="flex min-h-full flex-1 items-center justify-center px-4 py-16">
-        <div className="w-full max-w-sm border border-rule bg-paper p-6 text-center">
-          <BrandMark size={28} className="mx-auto" />
-          <h1 className="mt-3 text-lg font-semibold tracking-tight">Cuenta creada</h1>
+        <div className="panel w-full max-w-sm p-8 text-center">
+          <BrandMark size={30} className="mx-auto" />
+          <h1 className="mt-4 text-xl font-bold tracking-tight">Cuenta creada</h1>
           <p className="mt-2 text-sm text-ink-muted">Ya puedes iniciar sesión.</p>
           <Button className="mt-4 w-full justify-center" onClick={() => router.push("/login")}>
             Ir a iniciar sesión
@@ -51,9 +51,9 @@ function RegisterForm() {
 
   return (
     <div className="flex min-h-full flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm border border-rule bg-paper p-6">
-        <BrandMark size={28} />
-        <h1 className="mt-3 text-lg font-semibold tracking-tight">Crear cuenta</h1>
+      <div className="panel w-full max-w-sm p-8">
+        <BrandMark size={30} />
+        <h1 className="mt-4 text-xl font-bold tracking-tight">Crear cuenta</h1>
         <p className="mt-1 text-sm text-ink-muted">Registra tu propio ledger de portfolio.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
@@ -93,7 +93,7 @@ function RegisterForm() {
           />
 
           {registerMutation.isError && (
-            <p role="alert" className="text-sm text-accent">
+            <p role="alert" className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">
               No se pudo crear la cuenta. ¿Quizás ese email ya está registrado?
             </p>
           )}

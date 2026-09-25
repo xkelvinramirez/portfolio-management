@@ -5,10 +5,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASSES: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  primary: "bg-ink text-paper hover:bg-ink/90",
+  primary: "bg-brand text-white hover:bg-brand/90",
   ghost: "text-ink-muted hover:text-ink",
-  // "danger" reads as a correction to the ledger (deleting/undoing an entry), which is
-  // exactly what the accent is reserved for — not a generic warning color.
+  // "danger" is reserved for a destructive/correcting action — the same red
+  // reserved everywhere else for negative movement, never a generic warning.
   danger: "text-accent hover:text-accent/80",
 };
 
@@ -16,7 +16,7 @@ const VARIANT_CLASSES: Record<NonNullable<ButtonProps["variant"]>, string> = {
 // action) can reuse the exact same visual style without duplicating it by hand.
 export function buttonClassName(variant: NonNullable<ButtonProps["variant"]> = "primary") {
   return (
-    "inline-block px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-40 " +
+    "inline-block rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-40 " +
     VARIANT_CLASSES[variant]
   );
 }

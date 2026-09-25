@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -87,11 +88,11 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
   );
 
   return (
-    <section className="border border-rule bg-paper p-4" aria-label="Histórico de valor">
+    <section className="panel p-6" aria-label="Histórico de valor">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xs font-medium tracking-wide text-ink-muted uppercase">Histórico</h2>
-          <p className="tabular text-xl font-semibold">
+          <h2 className="text-sm font-bold">Histórico</h2>
+          <p className="tabular text-2xl font-extrabold">
             {reading
               ? formatCurrency(reading.value)
               : currentValue !== undefined
@@ -119,7 +120,7 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
       <div className="mt-4 h-48">
         {merged.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <ComposedChart
               data={merged}
               onMouseMove={(state: unknown) => {
                 const activePayload = (state as { activePayload?: { payload: MergedPoint }[] })
@@ -129,6 +130,12 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
               onMouseLeave={() => setHovered(null)}
               margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
             >
+              <defs>
+                <linearGradient id="valueHistoryArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.18} />
+                  <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="var(--rule)" vertical={false} />
               <XAxis
                 dataKey="date"
@@ -140,8 +147,15 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
                 minTickGap={24}
               />
               <YAxis hide domain={["auto", "auto"]} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="none"
+                fill="url(#valueHistoryArea)"
+                isAnimationActive={false}
+              />
               <Tooltip
-                cursor={{ stroke: "var(--ink)", strokeWidth: 1 }}
+                cursor={{ stroke: "var(--ink-muted)", strokeWidth: 1 }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as MergedPoint;
@@ -153,7 +167,7 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
                   // the header reading above already covers the total.
                   if (breakdown.length === 0) return null;
                   return (
-                    <div className="border border-rule bg-paper px-2.5 py-2 text-xs">
+                    <div className="panel px-3 py-2.5 text-xs">
                       <p className="mb-1 text-ink-muted">{formatDate(row.date)}</p>
                       <ul className="space-y-0.5">
                         {breakdown.map((entry) => (
@@ -194,7 +208,7 @@ export function ValueHistoryChart({ points, byAsset, currentValue }: ValueHistor
                   isAnimationActive={false}
                 />
               ))}
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
           <p className="flex h-full items-center justify-center text-center text-sm text-ink-muted">

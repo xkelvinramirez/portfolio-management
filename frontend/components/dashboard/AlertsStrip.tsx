@@ -25,7 +25,7 @@ export function AlertsStrip({ holdings }: AlertsStripProps) {
   return (
     <div
       role="status"
-      className="flex items-start justify-between gap-4 border border-rule bg-paper-raised px-4 py-3 text-sm"
+      className="flex items-start justify-between gap-4 rounded-xl bg-paper-raised px-4 py-3 text-sm"
     >
       <div>
         <p className="font-medium">Avisos</p>

@@ -58,15 +58,15 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
   }
 
   return (
-    <section aria-label="Holdings actuales" className="border border-rule bg-paper">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3">
-        <h2 className="text-sm font-medium">Holdings</h2>
+    <section aria-label="Holdings actuales" className="panel overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-rule px-6 py-4">
+        <h2 className="text-sm font-bold">Holdings</h2>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filtrar por activo o exchange…"
-          className="w-full max-w-64 border border-rule bg-paper px-2.5 py-1.5 text-sm placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-ink"
+          className="w-full max-w-64 rounded-lg border border-rule bg-paper px-3 py-2 text-sm placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-brand"
         />
       </div>
 
