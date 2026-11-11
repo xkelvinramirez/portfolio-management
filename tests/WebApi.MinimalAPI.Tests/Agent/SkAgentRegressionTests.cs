@@ -218,8 +218,10 @@ public sealed class SkAgentRegressionTests
         _portfolioEntryRepository.GetByPortfolioIdAsync(PortfolioId, Arg.Any<CancellationToken>())
             .Returns(
             [
-                Entry(cryptoCurrencyId: 1, "BTC", quantity: 2m, pricePerUnit: 100m, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
+                // Lower-value asset first on purpose: holdings come out in insertion order unless the
+                // plugin sorts them, so this order is what makes the "descending by value" test discriminate.
                 Entry(cryptoCurrencyId: 2, "ETH", quantity: 3m, pricePerUnit: 10m, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
+                Entry(cryptoCurrencyId: 1, "BTC", quantity: 2m, pricePerUnit: 100m, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             ]);
     }
 

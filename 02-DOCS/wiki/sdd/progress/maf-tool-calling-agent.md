@@ -32,3 +32,10 @@ slug: maf-tool-calling-agent
 - no toca código bajo `*/Agent/`.
 - decision: none
 - blocker: none
+
+## T039 — revisión por tarea — 2026-11-11
+- status: complete
+- review: changes-needed (0 critical, 1 important, 3 minor) → Important corregido.
+- important (corregido): el test de holdings "ordenados desc." no podía fallar (el seed ya venía ordenado y GroupBy conserva el orden). Seed invertido (ETH antes que BTC). Prueba: quitar temporalmente `OrderByDescending` del plugin → 1 fallo ("Expected holdings to be equal to…"); plugin restaurado con `git checkout` (sin cambios en src/).
+- minor (diferidos a review final): (1) Id del resumen de ListMyPortfolios queda en 0 (Id con `private init`); (2) los tests fijan KernelFactory con un ServiceCollection propio, no las registraciones de producción ni el valor de `MaxAllowedToolLoops`; (3) `HttpClient` del doble no se libera ("sin red" por construcción).
+- suite: unit 156/156.
