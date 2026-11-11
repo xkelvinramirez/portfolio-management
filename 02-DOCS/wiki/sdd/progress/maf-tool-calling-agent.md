@@ -194,3 +194,20 @@ slug: maf-tool-calling-agent
 - **decisión (hueco del plan):** payloads tipados propios en `Application/MafAgent/Payloads` (id objetivo con `[PayloadTarget]` y todos los campos de la petición completa), porque `Update*Request` no lleva el id que necesita el comando. `Before` es el `FieldSnapshot` del lector. `BusinessTime` centraliza `Europe/Madrid` y los dos formatos de presentación.
 - files: src/Application/MafAgent/{PendingActionFactory,FieldSnapshot,BusinessTime,StaleCheck,CurrentValuesReader}.cs, src/Application/MafAgent/Payloads/PendingActionPayloads.cs, tests/Application.Tests/MafAgent/{PendingActionFactoryTests,StaleCheckTests,CurrentValuesReaderTests}.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T013-T016.md)
+
+## T013–T016 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 2 important, 5 minor).
+- important #1 descartado con evidencia: "G29" ya normaliza la escala de los decimales (ver la verificación de T017–T018).
+- important #2 corregido: `FieldSnapshotTests` (Kind Utc/Unspecified/Local/DateTimeOffset).
+- minor corregidos: #3 (comentario en StaleCheck), #4 (test del título con forma de fecha).
+- **pauta para T019/T023 (minor 5):** `ReadPayload`/`ReadBefore`/`ToDto` lanzan con datos corruptos o que no se descifran. En confirm, la lectura tras el reclamo queda dentro del `catch` documentado (→ Failed). Antes del reclamo y en chat, una excepción ahí es un fallo de servidor (500), no de negocio.
+- minor diferidos: #6 `BusinessTime.Zone` sin tzdata (igual que los handlers actuales); #7 visibilidad interna de helpers (sin impacto).
+
+## T017–T018 — 2026-11-11
+- status: complete
+- red: CS0246 (`PendingActionExecutor` ausente). green: 11/11; unit 272/272; integración 11/11.
+- mutantes: 5, todos detectados.
+- decision: el ejecutor no reenvía su `ct` y despacha siempre con `CancellationToken.None` (más fuerte que "quien lo llama pasa None"). `StatusReportSentResult` es el resultado de un informe enviado.
+- files: src/Application/MafAgent/PendingActionExecutor.cs, StaleCheck.cs (comentario), tests/Application.Tests/MafAgent/{PendingActionExecutorTests,FieldSnapshotTests,PendingActionFactoryTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T017-T018.md)

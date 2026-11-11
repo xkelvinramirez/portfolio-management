@@ -190,6 +190,25 @@ public class PendingActionFactoryTests
         dto.Before["Quantity"].Should().Be("0.5");
     }
 
+    [Fact]
+    public void ToDto_EditBefore_LeavesATextFieldThatLooksLikeADateUntouched()
+    {
+        const string DateLikeTitle = "2026-11-10T18:30:00.0000000Z";
+        var payload = new UpdateNotePayload("note-1", "Ideas", "Nuevo", "x", true);
+        var before = new Dictionary<string, string?>
+        {
+            ["Category"] = "Ideas",
+            ["Title"] = DateLikeTitle,
+            ["Content"] = "x",
+            ["IsActive"] = "true",
+        };
+        PendingActionFactory factory = CreateFactory();
+
+        PendingActionDto dto = factory.ToDto(factory.Create(_conversationId, PendingActionOperation.UpdateNote, payload, before));
+
+        dto.Before!["Title"].Should().Be(DateLikeTitle);
+    }
+
     [Theory]
     [InlineData(PendingActionOperation.UpdatePortfolio)]
     [InlineData(PendingActionOperation.UpdateEntry)]
