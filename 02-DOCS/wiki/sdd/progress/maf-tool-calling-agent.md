@@ -112,3 +112,8 @@ slug: maf-tool-calling-agent
 - files: src/Application/MafAgent/Interfaces/*.cs, src/Application/Application.csproj
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T003-T008.md); unit 186/186.
 - per-task review: pendiente (agrupada T003–T008).
+
+## T003–T008 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 4 minor).
+- minor (diferidos a la revisión final): (1) `UpdateSession` va más allá del plan, pero está testeado y registrado como contrato M6; (2) `InternalsVisibleTo` de Infrastructure → lo cubre T009; (3) `Guid.CreateVersion7(nowUtc)` reinterpreta fechas con Kind distinto de Utc (§0 ya lo prohíbe; documentar o asertar); (4) `MarkFailed` no protege contra un errorCode vacío.
