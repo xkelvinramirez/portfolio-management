@@ -58,3 +58,15 @@ slug: maf-tool-calling-agent
 ## config — 2026-11-11
 - status: complete
 - fix: comando integration con `--ignore-exit-code 8` (MTP: 8 = cero tests). `--minimum-expected-tests 0` probado y descartado (sigue en exit 8). Verificado: exit 0 con 0 tests. Límite: el control negativo (un test de integración que falle → exit 2) se comprobará en T011.
+
+## T001 — 2026-11-11
+- status: complete
+- decision (usuario): MAF 1.28.0; transitivo MEAI 10.5→10.11 y OpenAI 2.10→2.14 aceptado; SK 1.81.0 sin cambios.
+- red: el spike es exploratorio. Las pruebas en vivo dependen del modelo; la observación del límite de iteraciones se fijó tras medirla. Primer intento de compilación con 4 errores (ambigüedad `FunctionCallContent` MEAI/SK; sobrecarga `ChatMessage`), corregidos.
+- green: offline 2/2 (Azure sin red; límite de iteraciones no lanza); manual contra Ollama 3/3 dos veces (herramienta tipada; sesión restaurada en un agente nuevo; llamada real a función de SK bajo MEAI 10.11).
+- suite: unit 161/161; T039 11/11; sin vulnerabilidades.
+- files: src/Infrastructure/Infrastructure.csproj, tests/WebApi.MinimalAPI.Tests/MafAgent/Spike/MafSpikeTests.cs, docs/maf-agent-packages.md
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T001.md)
+- model note: qwen2.5:3b-instruct (CPU, tools); 19 herramientas pendiente de T035.
+- per-task review: pendiente (ver checkpoint).
+- blocker: none
