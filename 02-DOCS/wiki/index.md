@@ -31,6 +31,7 @@ timestamp: 2026-11-11T12:00:00Z
 - [Agente MAF con tool-calling](sdd/analysis/maf-tool-calling-agent.md) — GATE: PASS (ejecución 4: 0 HIGH; 9 MEDIUM/LOW corregidos, 4 aceptados), 2026-11-11
 
 ### sdd/verifications
+- [maf-tool-calling-agent — T037–T038 (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-11-T037-T038.md) — PASS (alcance de tarea), 2026-11-11
 - [maf-tool-calling-agent — T009–T012 (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-11-T009-T012.md) — PASS (alcance de tarea), 2026-11-11
 - [maf-tool-calling-agent — T003–T008 (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-11-T003-T008.md) — PASS (alcance de tarea), 2026-11-11
 - [maf-tool-calling-agent — T001 spike (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-11-T001.md) — PASS (alcance de tarea), 2026-11-11

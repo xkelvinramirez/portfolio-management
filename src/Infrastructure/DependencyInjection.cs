@@ -138,12 +138,19 @@ public static class DependencyInjection
     private static IServiceCollection AddDbContexts(this IServiceCollection services, IConfiguration configuration)
     {
         string? connectionString = configuration.GetConnectionString("Database");
+
+        // One AddedEntityIdLog per request: it records the real ids of inserted entities after commit,
+        // because create handlers build their response while the identity id is still 0.
+        services.AddScoped<AddedEntityIdLog>();
+        services.AddScoped<IAddedEntityIdLog>(sp => sp.GetRequiredService<AddedEntityIdLog>());
+
         services.AddDbContext<AppDbContext>(
-            options => options
+            (sp, options) => options
                 .UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions
                     .MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.Default)
                     .EnableRetryOnFailure())
-                .UseSnakeCaseNamingConvention());
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(sp.GetRequiredService<AddedEntityIdLog>()));
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         return services;
     }

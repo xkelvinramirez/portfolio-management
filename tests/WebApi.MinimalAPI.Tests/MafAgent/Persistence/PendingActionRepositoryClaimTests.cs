@@ -3,7 +3,7 @@ using FluentAssertions;
 using Infrastructure.Common.Persistence.Contexts;
 using Infrastructure.MafAgent.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+
 
 namespace WebApi.MinimalAPI.Tests.MafAgent.Persistence;
 
@@ -15,11 +15,10 @@ namespace WebApi.MinimalAPI.Tests.MafAgent.Persistence;
 /// Connection string: env var ConnectionStrings__Database, else the WebApi project's user-secrets.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection(DevDatabaseCollection.Name)]
 public sealed class PendingActionRepositoryClaimTests : IAsyncLifetime
 {
-    private const string WebApiUserSecretsId = "daa01fcc-134f-4f9c-b600-67504a448d77";
-
-    private readonly DbContextOptions<AppDbContext> _options = BuildOptions();
+    private readonly DbContextOptions<AppDbContext> _options = DevDatabase.Options();
     private readonly DateTime _now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc);
     private long _userId;
     private long _otherUserId;
@@ -29,13 +28,12 @@ public sealed class PendingActionRepositoryClaimTests : IAsyncLifetime
     {
         await using AppDbContext db = NewContext();
 
-        // Sweep residue from a previous run killed mid-test (DisposeAsync never ran). Only this class
-        // creates users with this prefix; deleting them cascades to their conversations and actions.
-        await db.Users.Where(u => u.Email.StartsWith("maf-it-") && u.Email.EndsWith("@test.local"))
-            .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+        // Sweep residue from a previous run killed mid-test (its DisposeAsync never ran). Safe because every
+        // class touching the dev database runs in the non-parallel DevDatabase collection.
+        await DevDatabase.SweepTestUsersAsync(db, TestContext.Current.CancellationToken);
 
-        User owner = User.Create($"maf-it-{Guid.NewGuid():N}@test.local", "MafIt", null, "not-a-hash");
-        User other = User.Create($"maf-it-{Guid.NewGuid():N}@test.local", "MafItOther", null, "not-a-hash");
+        User owner = DevDatabase.NewTestUser("MafIt");
+        User other = DevDatabase.NewTestUser("MafItOther");
         db.Users.AddRange(owner, other);
         await db.SaveChangesAsync();
         _userId = owner.Id;
@@ -223,20 +221,4 @@ public sealed class PendingActionRepositoryClaimTests : IAsyncLifetime
     private async Task<PendingActionStatus> StatusOf(Guid id) => (await Load(id)).Status;
 
     private AppDbContext NewContext() => new(_options);
-
-    private static DbContextOptions<AppDbContext> BuildOptions()
-    {
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddUserSecrets(WebApiUserSecretsId)
-            .AddEnvironmentVariables()
-            .Build();
-        string connectionString = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException(
-                "Integration tests need ConnectionStrings:Database (env var ConnectionStrings__Database or WebApi user-secrets).");
-
-        return new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString)
-            .UseSnakeCaseNamingConvention()
-            .Options;
-    }
 }

@@ -148,3 +148,15 @@ slug: maf-tool-calling-agent
 - minor (corregido): falta el borde exacto de caducidad en el claim → `TryClaim_AtTheExactTenMinuteMark_ReturnsFalse`; el mutante `ExpiresAt > now` → `>=` ahora falla. Integración 10/10.
 - minor (corregido): barrido de usuarios `maf-it-*@test.local` residuales en `InitializeAsync` (por si se mata el proceso a mitad de test).
 - minor (diferidos): (1) sin cadena de conexión, los tests INTEG fallan en vez de saltarse; se ejecutan con el filtro `Category=Integration` de config.yaml y el `UNIT` los excluye; (2) "no Pending" en Reject solo prueba Executing (el mutante de estado ya muere); (3) `ExecuteUpdate` deja obsoleta una entidad ya cargada en el tracker: por diseño, T019/T020 deben mantener el orden MarkExecuting/DiscardAll.
+
+## Ramas — force-push del PR1 — 2026-11-11
+- El usuario ejecutó el force-push: `origin/feature/maf-tool-calling-agent` = `ec54b8a` (solo el PR1). La rama local del PR1 está abierta en la carpeta principal y sigue en `c3e4c05`; hay que alinearla allí (`git reset --keep origin/feature/maf-tool-calling-agent`) para que un "Sync" del IDE no vuelva a subir T003–T008.
+
+## T037 + T038 — 2026-11-11
+- status: complete
+- red: tests no compilaban (CS0246, `AddedEntityIdLog` ausente).
+- green: 5/5 InMemory + 1/1 Postgres; unit 193/193; integración 11/11.
+- **hallazgo de test:** el mutante "registrar ids antes del commit" sobrevivía con InMemory (asigna ids en `Add`). Se añadió `AddedEntityIdLogIntegrationTests` (Postgres: `Id == 0` antes de guardar), que lo mata ("Expected 5L, but found 0L"). Desviación del done-check de T037: se añade una capa de integración.
+- refactor: helper `DevDatabase` (cadena, usuario de test, barrido) y colección xUnit `DevDatabase` sin paralelismo, para que el barrido de una clase no borre usuarios vivos de otra.
+- files: src/Infrastructure/MafAgent/Persistence/AddedEntityIdLog.cs, src/Infrastructure/DependencyInjection.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Persistence/{AddedEntityIdLogTests,AddedEntityIdLogIntegrationTests,DevDatabase}.cs, PendingActionRepositoryClaimTests.cs (usa el helper)
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T037-T038.md)
