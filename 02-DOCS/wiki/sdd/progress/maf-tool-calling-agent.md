@@ -166,3 +166,13 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass (0 critical, 0 important, 5 minor). DI y ciclo de vida correctos: la misma instancia scoped en el contexto y en `IAddedEntityIdLog`, sin dependencia cautiva.
 - minor (diferidos): (1) reintentos de `EnableRetryOnFailure`: según el diseño de EF el reintento ocurre dentro de la estrategia, tras `SavingChanges`, y `SaveChangesFailed` solo salta al fallo final, así que la lista pendiente sobrevive. NO verificado en el código fuente de EF; riesgo bajo. (2) cableado DI no probado aquí: T033 (ServiceProvider real) debe afirmar id > 0 e igual al de la fila. (3) solo la ruta async contra Postgres. (4) otro proceso de tests concurrente sobre la base compartida (aceptado). (5) línea en blanco extra en PendingActionRepositoryClaimTests.
 - PR2 pendiente: solo T002 (infraestructura de tests HTTP).
+
+## T002 — 2026-11-11
+- status: complete
+- red/green: smoke 4/4 a la primera; verificado con mutantes (repositorio real → 2 fallos; sin doble de Cosmos → 4 fallos).
+- harness: `MafAgentApiFactory` (Testing, settings en memoria, EF InMemory + AddedEntityIdLog, doble de transiciones, dobles de Cosmos/runner/email/CoinGecko, FakeTimeProvider, auth por cabecera `X-Test-UserId`). Retira solo el hosted service de HealthChecks UI.
+- decision: `InternalsVisibleTo(WebApi.MinimalAPI.Tests)` en WebApi.csproj en lugar de `public partial class Program` (sin tocar código).
+- finding (fuera de alcance): HealthChecks.UI no carga IdentityModel 5.2 en la salida de tests; revisar en la API desplegada.
+- suite: unit 197/197, integration 11/11.
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T002.md)
+- **PR2 completo:** T002–T012, T037, T038.
