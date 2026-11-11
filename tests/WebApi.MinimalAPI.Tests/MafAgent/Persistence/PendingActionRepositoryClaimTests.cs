@@ -28,6 +28,12 @@ public sealed class PendingActionRepositoryClaimTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await using AppDbContext db = NewContext();
+
+        // Sweep residue from a previous run killed mid-test (DisposeAsync never ran). Only this class
+        // creates users with this prefix; deleting them cascades to their conversations and actions.
+        await db.Users.Where(u => u.Email.StartsWith("maf-it-") && u.Email.EndsWith("@test.local"))
+            .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+
         User owner = User.Create($"maf-it-{Guid.NewGuid():N}@test.local", "MafIt", null, "not-a-hash");
         User other = User.Create($"maf-it-{Guid.NewGuid():N}@test.local", "MafItOther", null, "not-a-hash");
         db.Users.AddRange(owner, other);
@@ -93,6 +99,17 @@ public sealed class PendingActionRepositoryClaimTests : IAsyncLifetime
         bool claimed = await new PendingActionRepository(db).TryClaimAsync(id, _userId, _now, CancellationToken.None);
 
         claimed.Should().BeFalse();
+        (await StatusOf(id)).Should().Be(PendingActionStatus.Pending);
+    }
+
+    [Fact]
+    public async Task TryClaim_AtTheExactTenMinuteMark_ReturnsFalse()
+    {
+        // ExpiresAt == now: the action is already expired (Domain IsExpired uses >=), so the claim's
+        // "ExpiresAt > now" guard must reject it. Pins the boundary against a > to >= mutation.
+        Guid id = await SeedActionAsync(_now.AddMinutes(-10));
+
+        (await ClaimInOwnContext(id)).Should().BeFalse();
         (await StatusOf(id)).Should().Be(PendingActionStatus.Pending);
     }
 

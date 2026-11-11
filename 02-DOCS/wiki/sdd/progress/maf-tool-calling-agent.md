@@ -141,3 +141,10 @@ slug: maf-tool-calling-agent
 - mutantes: sin `Status==Pending` → 4 fallos (incl. concurrencia); sin `ExpiresAt>now` → 2 fallos.
 - suite: unit 188/188, integración 9/9.
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T009-T012.md)
+
+## T009–T012 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 5 minor).
+- minor (corregido): falta el borde exacto de caducidad en el claim → `TryClaim_AtTheExactTenMinuteMark_ReturnsFalse`; el mutante `ExpiresAt > now` → `>=` ahora falla. Integración 10/10.
+- minor (corregido): barrido de usuarios `maf-it-*@test.local` residuales en `InitializeAsync` (por si se mata el proceso a mitad de test).
+- minor (diferidos): (1) sin cadena de conexión, los tests INTEG fallan en vez de saltarse; se ejecutan con el filtro `Category=Integration` de config.yaml y el `UNIT` los excluye; (2) "no Pending" en Reject solo prueba Executing (el mutante de estado ya muere); (3) `ExecuteUpdate` deja obsoleta una entidad ya cargada en el tracker: por diseño, T019/T020 deben mantener el orden MarkExecuting/DiscardAll.
