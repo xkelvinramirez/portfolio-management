@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using System.Globalization;
 using Application.Common.Security;
 using Application.PortfolioEntries.Interfaces;
 using Application.Portfolios.Interfaces;
+using Domain.Entities;
 using Microsoft.SemanticKernel;
 
 namespace Infrastructure.Agent.Plugins;
@@ -11,6 +13,12 @@ public sealed record PortfolioSummaryForAgent(long Id, string Name, string Descr
 public sealed record PortfolioHoldingForAgent(string Symbol, decimal Quantity, decimal Value);
 
 public sealed record AssetValuePointForAgent(string Symbol, DateTime Date, decimal Value);
+
+public sealed record PortfolioAssetValueComparisonForAgent(
+    string Symbol,
+    decimal StartValue,
+    decimal EndValue,
+    decimal Difference);
 
 /// <summary>
 /// Kernel functions never take a userId parameter - that is exactly the injection vector the
@@ -39,7 +47,7 @@ public sealed class PortfolioAgentPlugin(
             .ToList();
     }
 
-    [KernelFunction, Description("Gets the current total value (sum of ALL holdings combined) of one of the authenticated user's portfolios, by portfolio id. Use ONLY when the question has no specific asset symbol and no date - for a single asset or a historical date, use GetAssetPeakOrTroughDateAsync or GetPortfolioHoldingsAsync instead.")]
+    [KernelFunction, Description("Gets the current total value (sum of ALL holdings combined) of one of the authenticated user's portfolios, by portfolio id. Use ONLY when the question has no specific asset symbol and no date. For a current per-asset breakdown use GetPortfolioHoldingsAsync; for comparing asset values across two dates use GetPortfolioAssetValueComparisonAsync; for a single asset's historical peak or trough use GetAssetPeakOrTroughDateAsync.")]
     public async Task<decimal?> GetPortfolioValueAsync(
         [Description("The portfolio id, as returned by ListMyPortfoliosAsync")] long portfolioId,
         CancellationToken cancellationToken = default)
@@ -54,7 +62,7 @@ public sealed class PortfolioAgentPlugin(
         return portfolio.GetTotalValue(entries);
     }
 
-    [KernelFunction, Description("Gets the CURRENT (right now, today) per-asset breakdown (symbol, quantity, value) of one of the authenticated user's portfolios, ordered from highest to lowest value. Use this to compare assets against each other as of today (e.g. 'which asset is worth the most right now'). Do NOT use this if the question mentions a date or 'when'/'cuándo' - use GetAssetPeakOrTroughDateAsync for that instead.")]
+    [KernelFunction, Description("Gets the CURRENT (right now, today) per-asset breakdown (symbol, quantity, value) of one of the authenticated user's portfolios, ordered from highest to lowest value. Use this to compare assets against each other as of today (e.g. 'which asset is worth the most right now'). Do NOT use this for historical dates; use GetPortfolioAssetValueComparisonAsync to compare two dates or GetAssetPeakOrTroughDateAsync for a single asset's historical peak or trough.")]
     public async Task<IReadOnlyList<PortfolioHoldingForAgent>?> GetPortfolioHoldingsAsync(
         [Description("The portfolio id, as returned by ListMyPortfoliosAsync")] long portfolioId,
         CancellationToken cancellationToken = default)
@@ -74,7 +82,7 @@ public sealed class PortfolioAgentPlugin(
             .ToList();
     }
 
-    [KernelFunction, Description("Finds the DATE when ONE specific named asset (by symbol) reached its historical highest or lowest value within one of the authenticated user's portfolios, optionally limited to a date range. Use this whenever the question names a specific asset AND mentions a date, 'when'/'cuándo', or a historical peak/trough (e.g. 'when was BTC worth the most'). Never use GetPortfolioValueAsync or GetPortfolioHoldingsAsync for these questions - those only cover the CURRENT value, not history.")]
+    [KernelFunction, Description("Finds the DATE when ONE specific named asset (by symbol) reached its historical highest or lowest value within one of the authenticated user's portfolios, optionally limited to a date range. Use this for a single asset's historical peak/trough (e.g. 'when was BTC worth the most'). For comparing asset values across two dates, use GetPortfolioAssetValueComparisonAsync instead.")]
     public async Task<AssetValuePointForAgent?> GetAssetPeakOrTroughDateAsync(
         [Description("The portfolio id, as returned by ListMyPortfoliosAsync")] long portfolioId,
         [Description("The asset symbol, e.g. BTC")] string symbol,
@@ -117,6 +125,60 @@ public sealed class PortfolioAgentPlugin(
         var extremePoint = wantsMin ? pointList.MinBy(p => p.Value) : pointList.MaxBy(p => p.Value);
 
         return new AssetValuePointForAgent(series!.Symbol, extremePoint!.Date, extremePoint.Value);
+    }
+
+    [KernelFunction, Description("Compares the value of every asset in one of the authenticated user's portfolios between two dates. Returns each asset's value on or before each date and the signed difference (end value minus start value), including assets present on only one date. Use this for questions asking how portfolio asset values changed between dates; dates must be yyyy-MM-dd.")]
+    public async Task<IReadOnlyList<PortfolioAssetValueComparisonForAgent>?> GetPortfolioAssetValueComparisonAsync(
+        [Description("The portfolio id, as returned by ListMyPortfoliosAsync")] long portfolioId,
+        [Description("The inclusive start date in yyyy-MM-dd format")] string from,
+        [Description("The inclusive end date in yyyy-MM-dd format")] string to,
+        CancellationToken cancellationToken = default)
+    {
+        if (!DateTime.TryParseExact(from, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fromDate))
+        {
+            throw new ArgumentException("The start date must use yyyy-MM-dd format.", nameof(from));
+        }
+
+        if (!DateTime.TryParseExact(to, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var toDate))
+        {
+            throw new ArgumentException("The end date must use yyyy-MM-dd format.", nameof(to));
+        }
+
+        if (fromDate.Date > toDate.Date)
+        {
+            throw new ArgumentException("The start date must be on or before the end date.", nameof(from));
+        }
+
+        var portfolio = await GetOwnedPortfolioOrNullAsync(portfolioId, cancellationToken);
+        if (portfolio is null)
+        {
+            return null;
+        }
+
+        var entries = await portfolioEntryRepository.GetByPortfolioIdAsync(portfolioId, cancellationToken);
+        var startValues = GetAssetValuesBySymbol(portfolio.GetHoldingsAsOf(entries, fromDate));
+        var endValues = GetAssetValuesBySymbol(portfolio.GetHoldingsAsOf(entries, toDate));
+
+        return startValues.Keys
+            .Union(endValues.Keys, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(symbol => symbol, StringComparer.OrdinalIgnoreCase)
+            .Select(symbol =>
+            {
+                var startValue = startValues.GetValueOrDefault(symbol);
+                var endValue = endValues.GetValueOrDefault(symbol);
+                return new PortfolioAssetValueComparisonForAgent(symbol, startValue, endValue, endValue - startValue);
+            })
+            .ToList();
+    }
+
+    private static Dictionary<string, decimal> GetAssetValuesBySymbol(IEnumerable<PortfolioEntry> holdings)
+    {
+        return holdings
+            .GroupBy(entry => entry.CryptoCurrency.Symbol, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(entry => entry.Quantity * entry.PricePerUnit),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     // Ownership check: never trust an LLM-supplied id blindly, even though it only ever came
