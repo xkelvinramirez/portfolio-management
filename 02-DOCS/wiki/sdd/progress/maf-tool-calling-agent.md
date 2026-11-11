@@ -86,3 +86,29 @@ slug: maf-tool-calling-agent
 - red (esperado): T039 `CreateKernel_…` falló: "found one extraneous item at index 4: GetPortfolioAssetValueComparison". La red de seguridad detectó el cambio de base.
 - green: T039 actualizado a la nueva línea base (5 funciones; los datos de la comparación ya los fija `PortfolioAgentPluginTests`). Unit 165/165, integration exit 0, spike manual 3/3, format limpio.
 - **trigger de spec:** la decisión diferida "comparación entre fechas… hasta que esa feature llegue a development" ya se cumple. Pendiente de decidir (clarify) si AC1 vuelve a 5 preguntas y el agente MAF añade la herramienta de comparación. No afecta al PR1.
+
+## T003 + T004 — 2026-11-11
+- status: complete
+- red: `MafConversationTests` no compilaba (CS0246, tipo ausente).
+- green: 6/6. Mutación `>`→`>=` en IsExpired → falla el test de 24 h exactas.
+- contract (M6, aceptado; fijado aquí): `MafConversation.Create(long userId, string encryptedSessionState, DateTime nowUtc)`, `IsExpired(nowUtc)` (> 24 h), `Touch(nowUtc)`, `UpdateSession(string encrypted, DateTime nowUtc)`. Id = `Guid.CreateVersion7(nowUtc)`.
+- files: src/Domain/Entities/MafConversation.cs, tests/Domain.Tests/Entities/MafConversationTests.cs
+
+## T005 + T006 — 2026-11-11
+- status: complete
+- red: `PendingActionTests` no compilaba (CS0246).
+- green: 15/15. Mutación `>=`→`>` en IsExpired → falla el test de 10 min exactos.
+- decision: las transiciones inválidas lanzan `InvalidOperationException` (Domain no tiene ErrorOr; los handlers comprueban el estado antes, así que es un error de programación, no de negocio). MarkExecuting/MarkRejected solo desde Pending; MarkSucceeded/MarkFailed/MarkStale solo desde Executing.
+- files: src/Domain/Entities/PendingAction*.cs, tests/Domain.Tests/Entities/PendingActionTests.cs
+
+## T007 — 2026-11-11
+- status: complete
+- decision: `Values`/`Before` como `IReadOnlyDictionary<string, string?>` (mismo formato que el snapshot de ICurrentValuesReader); `Result` como `object?`.
+- files: src/Contracts/MafAgent/*.cs
+
+## T008 — 2026-11-11
+- status: complete
+- check: refs prohibidas en Application con controles positivo y negativo; puertos públicos; InternalsVisibleTo.
+- files: src/Application/MafAgent/Interfaces/*.cs, src/Application/Application.csproj
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T003-T008.md); unit 186/186.
+- per-task review: pendiente (agrupada T003–T008).

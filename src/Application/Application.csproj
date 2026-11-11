@@ -27,6 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Application.Tests" />
+    <InternalsVisibleTo Include="WebApi.MinimalAPI.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Contracts\Contracts.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>
