@@ -211,3 +211,11 @@ slug: maf-tool-calling-agent
 - decision: el ejecutor no reenvía su `ct` y despacha siempre con `CancellationToken.None` (más fuerte que "quien lo llama pasa None"). `StatusReportSentResult` es el resultado de un informe enviado.
 - files: src/Application/MafAgent/PendingActionExecutor.cs, StaleCheck.cs (comentario), tests/Application.Tests/MafAgent/{PendingActionExecutorTests,FieldSnapshotTests,PendingActionFactoryTests}.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T017-T018.md)
+
+## T019–T020 — 2026-11-11
+- status: complete
+- red: CS0234/CS0246 (handler ausente). green: 19/19; unit 291/291; integración 11/11.
+- mutantes: 8; 7 detectados y 1 equivalente (comprobación doble de dueño).
+- decisiones: `MafAgentErrors` con los códigos exactos de plan §0. Orden previo al reclamo: dueño → caducidad (acción o conversación) → estado. Tras el reclamo: leer el payload, comprobar el desfase y ejecutar, todo dentro del único `catch (Exception)` documentado; así un payload corrupto acaba en `Failed` (pauta de la revisión de T013–T016). La nota de sesión se añade FUERA del `catch`: si fallara, sería un 500 y la acción quedaría en `Executing` (nunca se re-ejecuta, "como mucho una vez").
+- files: src/Application/MafAgent/{MafAgentErrors.cs,Command/ConfirmPendingActionCommandHandler.cs,Command/ConfirmPendingActionCommandValidator.cs}, tests/Application.Tests/MafAgent/{ConfirmPendingActionCommandHandlerTests,ListLogger}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T019-T020.md)
