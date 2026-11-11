@@ -37,6 +37,9 @@ public sealed class SkAgentRegressionTests
         "GetPortfolioValue",
         "GetPortfolioHoldings",
         "GetAssetPeakOrTroughDate",
+        // Added on development by PR #19 (feature/portfolio-asset-value-comparison). Its data behaviour
+        // is pinned by PortfolioAgentPluginTests; here we only pin that the kernel registers it.
+        "GetPortfolioAssetValueComparison",
     ];
 
     private readonly IPortfolioRepository _portfolioRepository = Substitute.For<IPortfolioRepository>();
@@ -51,7 +54,7 @@ public sealed class SkAgentRegressionTests
     // ---------- Kernel construction (KernelFactory) ----------
 
     [Fact]
-    public void CreateKernel_RegistersPortfolioOperationsPluginWithTheFourReadFunctions()
+    public void CreateKernel_RegistersPortfolioOperationsPluginWithTheExpectedReadFunctions()
     {
         Kernel kernel = CreateKernelFactory().CreateKernel();
 

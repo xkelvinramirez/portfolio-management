@@ -78,3 +78,11 @@ slug: maf-tool-calling-agent
 - minor (corregido): la comprobación del JSON de sesión exige ahora el resultado de la herramienta (`1234.5`), no una palabra del prompt. Manual 3/3.
 - minor (corregido): `docs/maf-agent-packages.md` resume también los saltos transitivos no IA (System.ClientModel, VectorData.Abstractions, nuevos AI.Evaluation/ML.Tokenizers/Google.Protobuf).
 - minor (diferido a T029/T030): el cliente Azure se construye con valores fijos y no desde `AiOptions`/configuración. T029 ya exige probar la selección de proveedor desde `AiOptions`. Además, `agent.Should().NotBeNull()` es trivial; el "sin red" se prueba por construcción.
+
+## Rebase sobre development (PR #19) — 2026-11-11
+- status: complete
+- contexto: `origin/development` recibió el PR #19 (`feature/portfolio-asset-value-comparison`), que añade al agente SK la 5.ª función `GetPortfolioAssetValueComparison` y `PortfolioAgentPluginTests`. El worktree se había cambiado a `development` y actualizado desde el IDE (reflog: checkout + pull); se volvió a `feature/maf-tool-calling-agent` sin pérdida.
+- rebase: 11 commits locales sin publicar, sin conflictos.
+- red (esperado): T039 `CreateKernel_…` falló: "found one extraneous item at index 4: GetPortfolioAssetValueComparison". La red de seguridad detectó el cambio de base.
+- green: T039 actualizado a la nueva línea base (5 funciones; los datos de la comparación ya los fija `PortfolioAgentPluginTests`). Unit 165/165, integration exit 0, spike manual 3/3, format limpio.
+- **trigger de spec:** la decisión diferida "comparación entre fechas… hasta que esa feature llegue a development" ya se cumple. Pendiente de decidir (clarify) si AC1 vuelve a 5 preguntas y el agente MAF añade la herramienta de comparación. No afecta al PR1.
