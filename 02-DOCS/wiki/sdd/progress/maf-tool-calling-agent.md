@@ -117,3 +117,27 @@ slug: maf-tool-calling-agent
 - status: complete
 - review: VERDICT pass (0 critical, 0 important, 4 minor).
 - minor (diferidos a la revisión final): (1) `UpdateSession` va más allá del plan, pero está testeado y registrado como contrato M6; (2) `InternalsVisibleTo` de Infrastructure → lo cubre T009; (3) `Guid.CreateVersion7(nowUtc)` reinterpreta fechas con Kind distinto de Utc (§0 ya lo prohíbe; documentar o asertar); (4) `MarkFailed` no protege contra un errorCode vacío.
+
+## Ramas — 2026-11-11
+- PR2 movido a `feature/maf-tool-calling-agent-pr2` (apilada sobre el PR1). Un push ajeno (18:44, probablemente el IDE) había publicado T003–T008 en `origin/feature/maf-tool-calling-agent`. El force-push para devolver el PR1 a `ec54b8a` lo bloquea el hook `pre-bash-guard` de dotnet-claude-kit: **pendiente de que el usuario lo ejecute**. `feature/maf-tool-calling-agent-pr2` publicada.
+
+## T009 — 2026-11-11
+- status: complete
+- files: src/Infrastructure/MafAgent/Persistence/{MafConversationConfiguration,PendingActionConfiguration,MafConversationRepository,PendingActionRepository}.cs, AppDbContext (DbSets), DependencyInjection (repos), Infrastructure.csproj (InternalsVisibleTo)
+- decision: enums como texto (auditoría legible; un cambio de orden del enum no reasigna filas). Repos directos sobre AppDbContext, porque `Repository<T>` exige `Entity` con id long.
+
+## T010 — 2026-11-11
+- status: complete
+- migration: 20261111175145_AddMafAgent (2 tablas + 3 índices, solo aditiva). Aplicada al Supabase de desarrollo (confirmado por el usuario).
+
+## T011 — 2026-11-11
+- status: complete
+- red: 9/9 con `NotImplementedException: T012` (con la siembra contra la base funcionando).
+- harness (M8, aceptado; fijado aquí): cadena desde la variable de entorno `ConnectionStrings__Database` o los user-secrets de WebApi (`daa01fcc-…`); un usuario temporal por test, borrado en `DisposeAsync`; concurrencia con dos `AppDbContext` independientes.
+
+## T012 — 2026-11-11
+- status: complete
+- green: 9/9 integración; `ExecuteUpdate` = 3; `TrackedChangesDiscarder` (`ChangeTracker.Clear()`) + tests 2/2 (EF InMemory añadido al proyecto de tests).
+- mutantes: sin `Status==Pending` → 4 fallos (incl. concurrencia); sin `ExpiresAt>now` → 2 fallos.
+- suite: unit 188/188, integración 9/9.
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T009-T012.md)

@@ -16,6 +16,8 @@ using Infrastructure.PortfolioEntries;
 using Infrastructure.Notes;
 using Infrastructure.Reports;
 using Infrastructure.Agent;
+using Application.MafAgent.Interfaces;
+using Infrastructure.MafAgent.Persistence;
 using Infrastructure.Agent.Filters;
 using Infrastructure.Agent.Plugins;
 using Infrastructure.Resilience;
@@ -153,6 +155,9 @@ public static class DependencyInjection
         services.AddScoped<IExchangeRepository, ExchangeRepository>();
         services.AddScoped<ICryptoCurrencyRepository, CryptoCurrencyRepository>();
         services.AddScoped<IPortfolioEntryRepository, PortfolioEntryRepository>();
+        services.AddScoped<IMafConversationRepository, MafConversationRepository>();
+        services.AddScoped<IPendingActionRepository, PendingActionRepository>();
+        services.AddScoped<ITrackedChangesDiscarder, TrackedChangesDiscarder>();
 
         return services;
     }
