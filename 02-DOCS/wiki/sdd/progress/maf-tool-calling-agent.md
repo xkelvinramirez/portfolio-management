@@ -160,3 +160,9 @@ slug: maf-tool-calling-agent
 - refactor: helper `DevDatabase` (cadena, usuario de test, barrido) y colección xUnit `DevDatabase` sin paralelismo, para que el barrido de una clase no borre usuarios vivos de otra.
 - files: src/Infrastructure/MafAgent/Persistence/AddedEntityIdLog.cs, src/Infrastructure/DependencyInjection.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Persistence/{AddedEntityIdLogTests,AddedEntityIdLogIntegrationTests,DevDatabase}.cs, PendingActionRepositoryClaimTests.cs (usa el helper)
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T037-T038.md)
+
+## T037–T038 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 5 minor). DI y ciclo de vida correctos: la misma instancia scoped en el contexto y en `IAddedEntityIdLog`, sin dependencia cautiva.
+- minor (diferidos): (1) reintentos de `EnableRetryOnFailure`: según el diseño de EF el reintento ocurre dentro de la estrategia, tras `SavingChanges`, y `SaveChangesFailed` solo salta al fallo final, así que la lista pendiente sobrevive. NO verificado en el código fuente de EF; riesgo bajo. (2) cableado DI no probado aquí: T033 (ServiceProvider real) debe afirmar id > 0 e igual al de la fila. (3) solo la ruta async contra Postgres. (4) otro proceso de tests concurrente sobre la base compartida (aceptado). (5) línea en blanco extra en PendingActionRepositoryClaimTests.
+- PR2 pendiente: solo T002 (infraestructura de tests HTTP).
