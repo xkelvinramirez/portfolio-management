@@ -1,0 +1,83 @@
+# SDD runtime config — written by sdd-init on 2026-11-11.
+# Later phases read this before choosing commands, TDD strictness, review budget or skill briefs.
+version: 1
+project:
+  root: .
+  stacks: [dotnet, aspnetcore-minimal-api, efcore-postgres, cosmosdb, nextjs, react]
+  package_managers: [dotnet, npm]          # frontend/package-lock.json
+  monorepo: true                            # portfolio-management.slnx (src/, tests/) + frontend/
+  signals:
+    - "solution: portfolio-management.slnx (.NET 10, C# 12)"
+    - "tests: xUnit v3 — tests/Domain.Tests, tests/Application.Tests, tests/WebApi.MinimalAPI.Tests (Architecture.Tests not in slnx)"
+    - "frontend: Next.js, scripts dev/build/start/lint, no test script"
+    - "ci: .github/workflows deploy-backend/frontend/worker (deploy only, no test workflow)"
+    - "hook: .claude/hooks/after-cs-edit.sh runs dotnet format + build per edited .cs file"
+    - ".NET skills come from the dotnet-claude-kit plugin (see CLAUDE.md), not from the rsc catalog"
+sdd:
+  artifact_store: 02-DOCS/wiki/sdd
+  execution_mode: interactive               # user chose 'con paradas'
+  registry_path: .rsc/skill-registry.json
+  review_budget:
+    line_budget: 400
+    file_budget: 12
+  delivery_strategy:
+    default: ask-on-risk                    # maf-tool-calling-agent plan forecasts autochain (5 PRs)
+testing:
+  strict_tdd: true
+  runners: [xunit-v3-mtp]
+  # .NET 10 SDK + xunit.v3 require Microsoft.Testing.Platform mode: global.json { "test": { "runner": "Microsoft.Testing.Platform" } }.
+  # Without it `dotnet test` fails ("Testing with VSTest target is no longer supported"). VSTest `--filter` syntax does NOT apply.
+  # Filter translation: --filter "FullyQualifiedName~X"  =>  --filter-class "*X"   (repeat --filter-class for OR)
+  categories:
+    unit: '--filter-not-trait "Category=Integration" --filter-not-trait "Category=Manual"'   # no Postgres, no Cosmos, no model
+    integration: '--filter-trait "Category=Integration"'                                   # needs dev Postgres with migrations applied
+    manual: '--filter-trait "Category=Manual"'                                             # needs a live model (Ollama); never in CI
+  commands:
+    apply:
+      - dotnet build portfolio-management.slnx
+      - dotnet test --solution portfolio-management.slnx --filter-not-trait "Category=Integration" --filter-not-trait "Category=Manual"
+    verify:
+      - dotnet format portfolio-management.slnx --verify-no-changes
+      - dotnet build portfolio-management.slnx
+      - dotnet test --solution portfolio-management.slnx --filter-not-trait "Category=Integration" --filter-not-trait "Category=Manual"
+      - dotnet test --solution portfolio-management.slnx --filter-trait "Category=Integration" --ignore-exit-code 8   # 8 = zero tests ran (MTP); failures still exit 2
+  baseline:
+    - "2026-11-11 on development+global.json: unit suite 145/145 green (~8s)"
+    verify_frontend:                        # only when frontend/ changed
+      - npm --prefix frontend run lint
+      - npm --prefix frontend run build
+  gaps:
+    - "dotnet test broken on development since 7190d30 (xunit.v3 without global.json MTP opt-in); fixed by adding global.json"
+    - "frontend has no test runner (lint + build only)"
+    - "no CI test workflow; verify runs locally"
+phase_rules:
+  proposal: optional-on-ambiguity
+  specify: requires intent or proposal
+  plan: requires spec
+  tasks: requires plan and spec
+  analyze: requires spec plan tasks
+  implement: requires analyze pass, strict_tdd when testing.strict_tdd is true
+  verify: requires spec tasks evidence
+  archive: requires verify record and review/ship outcome
+models:
+  enabled: false              # opt-in master switch; false = honor session model, announce nothing
+  provider: anthropic         # which provider the tiers below resolve to
+  tiers:
+    heavy: claude-opus-4-8
+    balanced: claude-sonnet-4-6
+    light: claude-haiku-4-5-20251001
+  phases:
+    constitution: heavy
+    specify: balanced
+    clarify: balanced
+    plan: heavy
+    tasks: balanced
+    analyze: heavy
+    implement: balanced
+    verify: balanced
+    review: heavy
+    ship: light
+    debug: heavy
+    worktrees: light
+    sdd-init: light
+  overrides: {}               # per-phase tier overrides set by the user

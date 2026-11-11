@@ -7,7 +7,14 @@ namespace Application.Common.Behaviors;
 
 public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
-    private static readonly string[] SensitivePropertyNames = ["Password", "AccessToken", "RefreshToken"];
+    // Credentials, plus free text that is user-written or decrypted from storage (chat messages,
+    // agent replies, pending-action payloads/results, note content): none of it may reach Seq.
+    // Matched by property name at any depth, including inside nested collections.
+    private static readonly string[] SensitivePropertyNames =
+    [
+        "Password", "AccessToken", "RefreshToken",
+        "Message", "Reply", "Values", "Before", "Result", "Content", "Summary",
+    ];
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
