@@ -14,11 +14,7 @@ public sealed record PortfolioHoldingForAgent(string Symbol, decimal Quantity, d
 
 public sealed record AssetValuePointForAgent(string Symbol, DateTime Date, decimal Value);
 
-public sealed record PortfolioAssetValueComparisonForAgent(
-    string Symbol,
-    decimal StartValue,
-    decimal EndValue,
-    decimal Difference);
+public sealed record PortfolioAssetValueComparisonForAgent(string Symbol, decimal StartValue, decimal EndValue, decimal Difference);
 
 /// <summary>
 /// Kernel functions never take a userId parameter - that is exactly the injection vector the
