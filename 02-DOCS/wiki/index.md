@@ -19,6 +19,7 @@ timestamp: 2026-11-11T12:00:00Z
 ## sdd
 - [Constitution (draft)](sdd/constitution.md)
 - [SDD decisions log](sdd/decisions.md)
+- [SDD runtime config](sdd/config.yaml) — comandos de test, TDD estricto, presupuesto de revisión
 
 ### sdd/specs
 - [Agente MAF con tool-calling](sdd/specs/maf-tool-calling-agent.md) — clarified, 2026-11-11
