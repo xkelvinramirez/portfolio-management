@@ -70,3 +70,11 @@ slug: maf-tool-calling-agent
 - model note: qwen2.5:3b-instruct (CPU, tools); 19 herramientas pendiente de T035.
 - per-task review: pendiente (ver checkpoint).
 - blocker: none
+
+## T001 — revisión por tarea — 2026-11-11
+- status: complete
+- review: changes-needed (0 critical, 1 important, 3 minor).
+- important (corregido): la observación del límite de iteraciones pasaba aunque la herramienta no se ejecutara nunca (`ValueCalls <= 3`). Ahora exige `== 3` y usa `NotThrowAsync`. Prueba: con la expectativa a 2 falla con "but found 3".
+- minor (corregido): la comprobación del JSON de sesión exige ahora el resultado de la herramienta (`1234.5`), no una palabra del prompt. Manual 3/3.
+- minor (corregido): `docs/maf-agent-packages.md` resume también los saltos transitivos no IA (System.ClientModel, VectorData.Abstractions, nuevos AI.Evaluation/ML.Tokenizers/Google.Protobuf).
+- minor (diferido a T029/T030): el cliente Azure se construye con valores fijos y no desde `AiOptions`/configuración. T029 ya exige probar la selección de proveedor desde `AiOptions`. Además, `agent.Should().NotBeNull()` es trivial; el "sin red" se prueba por construcción.

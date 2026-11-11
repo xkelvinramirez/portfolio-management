@@ -50,7 +50,7 @@ public sealed class MafSpikeTests
 
         JsonElement serialized = await firstAgent.SerializeSessionAsync(session, cancellationToken: TestContext.Current.CancellationToken);
         string json = serialized.GetRawText();
-        json.Should().Contain("Principal", "the persisted session must carry the previous turns");
+        json.Should().Contain("1234.5", "the persisted session must carry the previous turn's tool result, not just the prompt");
 
         // A brand-new agent instance (as after an API restart) restores the session from JSON only.
         AIAgent secondAgent = CreateMafAgent(CreateOllamaChatClient(), new SpikeTools());
@@ -109,22 +109,15 @@ public sealed class MafSpikeTests
             .Build();
         AIAgent agent = CreateMafAgent(chatClient, tools);
 
-        Exception? thrown = null;
         AgentResponse? response = null;
-        try
-        {
+        Func<Task> run = async () =>
             response = await agent.RunAsync("loop", cancellationToken: TestContext.Current.CancellationToken);
-        }
-        catch (Exception ex)
-        {
-            thrown = ex;
-        }
 
         // Observation pinned for plan §0 "Límite de iteraciones" (analyze M10): reaching the cap does
-        // NOT throw; the tool runs at most MaximumIterationsPerRequest times and a response comes back.
-        thrown.Should().BeNull();
+        // NOT throw; the tool runs exactly MaximumIterationsPerRequest times and a response comes back.
+        await run.Should().NotThrowAsync();
         response.Should().NotBeNull();
-        tools.ValueCalls.Should().BeLessThanOrEqualTo(3);
+        tools.ValueCalls.Should().Be(3, "the cap must actually be reached for this observation to mean anything");
     }
 
     // ---------- Helpers ----------

@@ -33,6 +33,8 @@ T034 comprueba que estas versiones no cambian sin aprobación.
 >  > OpenAI 2.14.0 
 ```
 
+**Otros cambios transitivos** (no son de IA, pero están cerca de los conectores de SK; visibles en las listas completas de abajo): `System.ClientModel` 1.10.0 → 1.15.0 (base del cliente `OpenAI`), `Microsoft.Extensions.VectorData.Abstractions` 10.5.2 → 10.10.0, y paquetes nuevos `Microsoft.Extensions.AI.Evaluation`, `Microsoft.ML.Tokenizers` y `Google.Protobuf`. Cubiertos por T039 (11/11) y por la llamada real a función de SK del spike. T034 debe compararlos también.
+
 ## Antes (development + global.json)
 
 ```text
