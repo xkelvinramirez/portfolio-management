@@ -219,3 +219,11 @@ slug: maf-tool-calling-agent
 - decisiones: `MafAgentErrors` con los códigos exactos de plan §0. Orden previo al reclamo: dueño → caducidad (acción o conversación) → estado. Tras el reclamo: leer el payload, comprobar el desfase y ejecutar, todo dentro del único `catch (Exception)` documentado; así un payload corrupto acaba en `Failed` (pauta de la revisión de T013–T016). La nota de sesión se añade FUERA del `catch`: si fallara, sería un 500 y la acción quedaría en `Executing` (nunca se re-ejecuta, "como mucho una vez").
 - files: src/Application/MafAgent/{MafAgentErrors.cs,Command/ConfirmPendingActionCommandHandler.cs,Command/ConfirmPendingActionCommandValidator.cs}, tests/Application.Tests/MafAgent/{ConfirmPendingActionCommandHandlerTests,ListLogger}.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T019-T020.md)
+
+## T017–T020 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT fail (1 important, 2 minor, 5 mutantes supervivientes). Ejecutor y respuestas a las preguntas de runtime: correctos (el SaveChanges interno escribe `Executing` sobre una fila ya en `Executing`, inocuo; tras `DiscardAll` la UoW no guarda nada).
+- important #1 corregido: la nota de sesión dentro del mismo `try`; si falla con el desenlace decidido, se devuelve y persiste el desenlace real sin nota. Sigue habiendo una única captura de `Exception` (dos ramas). Mi decisión anterior (nota fuera de la captura, 500 aceptado) era incorrecta: el plan solo acepta `Executing` permanente ante una caída del proceso.
+- minor #2 corregido: aviso si `TryMarkFailedAsync` devuelve false. minor #3 → pauta para T031 (el endpoint confirm sin token).
+- mutantes supervivientes: los 5 cubiertos con tests nuevos (unit 296/296).
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T020-review.md)

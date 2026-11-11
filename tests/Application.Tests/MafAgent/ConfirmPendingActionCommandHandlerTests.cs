@@ -285,6 +285,79 @@ public class ConfirmPendingActionCommandHandlerTests
         _actions.Received(1).Update(action);
     }
 
+    // ---- review of T017–T020 ----
+
+    [Fact]
+    public async Task AMissingConversation_IsNotFound()
+    {
+        PendingAction action = StoredCreatePortfolio();
+        _conversations.GetByIdAsync(_conversation.Id, Arg.Any<CancellationToken>()).Returns((MafConversation?)null);
+
+        ErrorOr<PendingActionResultDto> result = await Confirm(action.Id);
+
+        result.FirstError.Code.Should().Be("MafAgent.PendingAction.NotFound");
+        await _actions.DidNotReceiveWithAnyArgs().TryClaimAsync(default, default, default, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ACreate_DoesNotReadCurrentValues()
+    {
+        PendingAction action = StoredCreatePortfolio();
+        CreatePortfolioReturns(new CreatePortfolioResponse(0, "Largo plazo"));
+
+        await Confirm(action.Id);
+
+        await _reader.DidNotReceiveWithAnyArgs().ReadAsync(default, default!, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task AStaleEdit_IsDecided_AndNotedInTheSession()
+    {
+        PendingAction action = StoredPortfolioEdit();
+        _reader.ReadAsync(PendingActionOperation.UpdatePortfolio, "3", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ErrorOr<IReadOnlyDictionary<string, string?>>>(
+                new Dictionary<string, string?> { ["Name"] = "Otro", ["Description"] = "Desc" }));
+
+        await Confirm(action.Id);
+
+        action.DecidedAt.Should().Be(Now);
+        await _runner.Received(1).AppendSystemNoteAsync(Session, Arg.Is<string>(n => n.Contains("Stale")), Arg.Any<CancellationToken>());
+        _conversations.Received(1).Update(_conversation);
+    }
+
+    [Fact]
+    public async Task ASessionNoteFailure_AfterTheWrite_KeepsTheRealOutcome_AsAValue()
+    {
+        PendingAction action = StoredCreatePortfolio();
+        CreatePortfolioReturns(new CreatePortfolioResponse(0, "Largo plazo"));
+        var noteFailure = new System.Text.Json.JsonException("corrupt session");
+        _runner.AppendSystemNoteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).ThrowsAsync(noteFailure);
+
+        ErrorOr<PendingActionResultDto> result = await Confirm(action.Id);
+
+        result.IsError.Should().BeFalse();
+        result.Value.Status.Should().Be("Succeeded");
+        action.Status.Should().Be(PendingActionStatus.Succeeded);
+        _actions.Received(1).Update(action);
+        _discarder.DidNotReceive().DiscardAll();
+        await _actions.DidNotReceiveWithAnyArgs().TryMarkFailedAsync(default, default!, default, TestContext.Current.CancellationToken);
+        _logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Exception == noteFailure);
+    }
+
+    [Fact]
+    public async Task AnExceptionWhoseFailedMarkFinds_NoExecutingRow_IsStillAFailedValue_AndIsLogged()
+    {
+        PendingAction action = StoredCreatePortfolio();
+        _sender.Send(Arg.Any<CreatePortfolioCommand>(), Arg.Any<CancellationToken>()).ThrowsAsync(new InvalidOperationException("x"));
+        _actions.TryMarkFailedAsync(action.Id, Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>()).Returns(false);
+
+        ErrorOr<PendingActionResultDto> result = await Confirm(action.Id);
+
+        result.IsError.Should().BeFalse();
+        result.Value.Status.Should().Be("Failed");
+        _logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Message.Contains("no longer Executing"));
+    }
+
     [Fact]
     public async Task AnExceptionFromTheCommand_DiscardsTrackedChangesBeforeMarkingFailed_AndIsAValue()
     {
@@ -301,7 +374,7 @@ public class ConfirmPendingActionCommandHandlerTests
         Received.InOrder(() =>
         {
             _discarder.DiscardAll();
-            _actions.TryMarkFailedAsync(action.Id, "MafAgent.PendingAction.UnexpectedFailure", Now, Arg.Any<CancellationToken>());
+            _actions.TryMarkFailedAsync(action.Id, "MafAgent.PendingAction.UnexpectedFailure", Now, CancellationToken.None);
         });
         await _runner.DidNotReceiveWithAnyArgs().AppendSystemNoteAsync(default!, default!, TestContext.Current.CancellationToken);
         _actions.DidNotReceiveWithAnyArgs().Update(default!);

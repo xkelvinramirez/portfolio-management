@@ -64,33 +64,50 @@ public sealed class ConfirmPendingActionCommandHandler(
         // ---- Claimed. From here on: no error results, no request token. ----
         action.MarkExecuting();
 
-        PendingActionResultDto outcome;
+        PendingActionResultDto? outcome = null;
         try
         {
             outcome = await RunClaimedAsync(action, now);
+            pendingActionRepository.Update(action);
+            await AppendOutcomeNoteAsync(conversation, outcome, now);
         }
         // Documented exception to the "no bare catch (Exception)" canon (plan §0 "Tras el reclamo" 3, and
-        // CLAUDE.md): after an irreversible claim the outcome must be persisted. Drop whatever the inner
-        // command left in the tracker, then persist Executing → Failed atomically outside the unit of work.
+        // CLAUDE.md), the only one in the feature: after an irreversible claim the outcome must be persisted
+        // and returned as a value, whatever throws.
+        catch (Exception exception) when (outcome is not null)
+        {
+            // The outcome is decided (and the write, if any, already happened): only the session note failed.
+            // Keep the real outcome, staged above, for the unit of work; the conversation just misses the note.
+            logger.LogWarning(exception, "Pending action {PendingActionId} ({Operation}) ended {Status}, but its outcome could not be noted in the conversation",
+                action.Id, action.Operation, outcome.Status);
+            return outcome;
+        }
         catch (Exception exception)
         {
+            // No outcome yet: drop whatever the inner command left in the tracker, then persist
+            // Executing → Failed atomically outside the unit of work.
             logger.LogError(exception, "Pending action {PendingActionId} ({Operation}) failed unexpectedly after being claimed", action.Id, action.Operation);
             trackedChangesDiscarder.DiscardAll();
-            await pendingActionRepository.TryMarkFailedAsync(action.Id, MafAgentErrors.UnexpectedFailureCode, now, CancellationToken.None);
+            if (!await pendingActionRepository.TryMarkFailedAsync(action.Id, MafAgentErrors.UnexpectedFailureCode, now, CancellationToken.None))
+            {
+                logger.LogWarning("Pending action {PendingActionId} was no longer Executing; its Failed outcome was not persisted", action.Id);
+            }
+
             return Result(action, "Failed", null, new PendingActionErrorDto(
                 MafAgentErrors.UnexpectedFailureCode, "The action could not be completed because of an unexpected error."));
         }
 
-        pendingActionRepository.Update(action);
+        logger.LogInformation("Pending action {PendingActionId} ({Operation}) confirmed by user {UserId}: {Status}",
+            action.Id, action.Operation, userId, outcome.Status);
+        return outcome;
+    }
 
+    private async Task AppendOutcomeNoteAsync(MafConversation conversation, PendingActionResultDto outcome, DateTime now)
+    {
         string session = encryptionService.Decrypt(conversation.EncryptedSessionState);
         string updatedSession = await agentRunner.AppendSystemNoteAsync(session, OutcomeNote(outcome), CancellationToken.None);
         conversation.UpdateSession(encryptionService.Encrypt(updatedSession), now);
         conversationRepository.Update(conversation);
-
-        logger.LogInformation("Pending action {PendingActionId} ({Operation}) confirmed by user {UserId}: {Status}",
-            action.Id, action.Operation, userId, outcome.Status);
-        return outcome;
     }
 
     private async Task<PendingActionResultDto> RunClaimedAsync(PendingAction action, DateTime now)
