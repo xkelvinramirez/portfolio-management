@@ -182,3 +182,15 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass (0 critical, 0 important, 4 minor). El `InternalsVisibleTo` de WebApi no contradice "sin tocar código", pero es una excepción a M1 a nivel de proyecto (registrada aquí).
 - **pautas obligatorias para T031** (minor 2): `Runner`, `Time` y la base InMemory se comparten dentro de un `IClassFixture`. Cada test usa ids de usuario propios y `Runner.ClearReceivedCalls()` (o una factoría por test) para que las aserciones de AC4 (`DidNotReceive`) y los `Returns` no se contaminen; no avanzar `Time` sin restaurarlo.
 - minor (diferidos): (1) no está verificado que `UseSetting` gane a las variables de entorno (ApplicationInsights/Serilog); fijarlo con `ConfigureAppConfiguration` o un guard si aparece; (3) el doble de transiciones solo prueba claim y mark-failed (reject y borde de caducidad cubiertos contra Postgres en T011); InMemory ignora FK y unique; (4) la aserción `Contains("Proxy")` depende del nombre de Castle.
+
+## Ramas — PR3 — 2026-11-11
+- Rama `feature/maf-tool-calling-agent-pr3` creada desde `origin/feature/maf-tool-calling-agent-pr2` (f0f07c5), sin upstream, para que un push automático del IDE no acabe en el PR2.
+
+## T013–T016 — 2026-11-11
+- status: complete
+- red: T013 no compilaba (CS0234/CS0246: `Payloads`, `PendingActionFactory`); T015 igual (`CurrentValuesReader`).
+- green: factoría 37/37; desfase y lector 19/19; unit 253/253; integración 11/11.
+- mutantes: 6, todos detectados (ver el registro de verificación).
+- **decisión (hueco del plan):** payloads tipados propios en `Application/MafAgent/Payloads` (id objetivo con `[PayloadTarget]` y todos los campos de la petición completa), porque `Update*Request` no lleva el id que necesita el comando. `Before` es el `FieldSnapshot` del lector. `BusinessTime` centraliza `Europe/Madrid` y los dos formatos de presentación.
+- files: src/Application/MafAgent/{PendingActionFactory,FieldSnapshot,BusinessTime,StaleCheck,CurrentValuesReader}.cs, src/Application/MafAgent/Payloads/PendingActionPayloads.cs, tests/Application.Tests/MafAgent/{PendingActionFactoryTests,StaleCheckTests,CurrentValuesReaderTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T013-T016.md)
