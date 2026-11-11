@@ -39,3 +39,18 @@ slug: maf-tool-calling-agent
 - important (corregido): el test de holdings "ordenados desc." no podía fallar (el seed ya venía ordenado y GroupBy conserva el orden). Seed invertido (ETH antes que BTC). Prueba: quitar temporalmente `OrderByDescending` del plugin → 1 fallo ("Expected holdings to be equal to…"); plugin restaurado con `git checkout` (sin cambios en src/).
 - minor (diferidos a review final): (1) Id del resumen de ListMyPortfolios queda en 0 (Id con `private init`); (2) los tests fijan KernelFactory con un ServiceCollection propio, no las registraciones de producción ni el valor de `MaxAllowedToolLoops`; (3) `HttpClient` del doble no se libera ("sin red" por construcción).
 - suite: unit 156/156.
+
+## T040 — 2026-11-11
+- status: complete
+- red: `dotnet test --project tests/Application.Tests --filter-class "*LoggingBehaviorRedactionTests"` → 1 fallo por aserción (los 10 centinelas, incl. `PendingActions[]` anidado, aparecían en el log); 2 guardas verdes (no sensibles sí se registran; `Password` ya oculto). Commit 6dc1934 (rojo intencionado).
+- files: tests/Application.Tests/Common/Behaviors/LoggingBehaviorRedactionTests.cs
+- decision: none · blocker: none
+
+## T041 — 2026-11-11
+- status: complete
+- green: `SensitivePropertyNames` += Message, Reply, Values, Before, Result, Content, Summary → T040 3/3; unit 159/159; format y build limpios.
+- verify (alcance tarea): PASS — ver verifications/maf-tool-calling-agent-2026-11-11-T041.md.
+- per-task review: omitida (cambio trivial de una lista de nombres; test visto rojo y verde).
+- finding (para tasks/config): el comando `integration` de config.yaml devuelve exit 8 mientras no haya tests de integración (MTP: cero tests) → añadir `--minimum-expected-tests 0` antes de T011.
+- files: src/Application/Common/Behaviors/LoggingBehavior.cs
+- decision: none (ya registrada en decisions.md, post-analyze 3) · blocker: none
