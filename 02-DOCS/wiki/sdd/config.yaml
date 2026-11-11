@@ -40,7 +40,7 @@ testing:
       - dotnet format portfolio-management.slnx --verify-no-changes
       - dotnet build portfolio-management.slnx
       - dotnet test --solution portfolio-management.slnx --filter-not-trait "Category=Integration" --filter-not-trait "Category=Manual"
-      - dotnet test --solution portfolio-management.slnx --filter-trait "Category=Integration"
+      - dotnet test --solution portfolio-management.slnx --filter-trait "Category=Integration" --ignore-exit-code 8   # 8 = zero tests ran (MTP); failures still exit 2
   baseline:
     - "2026-11-11 on development+global.json: unit suite 145/145 green (~8s)"
     verify_frontend:                        # only when frontend/ changed

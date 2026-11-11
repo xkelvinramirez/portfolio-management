@@ -54,3 +54,7 @@ slug: maf-tool-calling-agent
 - finding (para tasks/config): el comando `integration` de config.yaml devuelve exit 8 mientras no haya tests de integración (MTP: cero tests) → añadir `--minimum-expected-tests 0` antes de T011.
 - files: src/Application/Common/Behaviors/LoggingBehavior.cs
 - decision: none (ya registrada en decisions.md, post-analyze 3) · blocker: none
+
+## config — 2026-11-11
+- status: complete
+- fix: comando integration con `--ignore-exit-code 8` (MTP: 8 = cero tests). `--minimum-expected-tests 0` probado y descartado (sigue en exit 8). Verificado: exit 0 con 0 tests. Límite: el control negativo (un test de integración que falle → exit 2) se comprobará en T011.
