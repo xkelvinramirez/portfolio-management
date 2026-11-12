@@ -156,6 +156,26 @@ Con Ollama y `qwen2.5:3b-instruct`. No se ejecuta en CI: el modelo no es determi
 | 8 | "Registra una compra de BTC …" | pide los datos que faltan; sin propuesta | **FALLO**: se inventa cantidad, precio y fecha en vez de preguntar (no llega a proponer porque omite el símbolo) |
 | 9 | "How much is my Principal portfolio worth right now?" | responde en inglés | **FALLO**: inglés correcto, id inventado |
 
+### Segunda ejecución (2026-11-12, tras reforzar el agente)
+
+Cambios: el contexto de cada turno lista los portafolios del usuario con su id real, y las instrucciones son
+reglas cortas y explícitas (idioma, no inventar ids ni datos, símbolo obligatorio, sin confirmaciones por texto).
+Mismo modelo, `qwen2.5:3b-instruct`.
+
+| # | Resultado | Detalle |
+| --- | --- | --- |
+| 1 | **OK** | `ListMyPortfolios`; responde en español |
+| 2 | **OK** | `GetPortfolioValue` con el id real; valor = el de la herramienta (añade "euros" por su cuenta) |
+| 3 | **OK** | `GetPortfolioHoldings`; BTC 40.000 |
+| 4 | **OK** | `GetAssetPeakOrTroughDate`; 2026-01-01, 45.000 |
+| 5 | **OK** | `GetPortfolioAssetValueComparison`; BTC 45.000→40.000, ETH 12.000→10.000 |
+| 6 | **FALLO** | id y fecha bien (`2026-11-11T00:00:00Z`), pero omite el símbolo: no propone y pide el símbolo |
+| 7 | **FALLO** | no propone nada, pero responde repitiendo una frase de sus instrucciones |
+| 8 | **FALLO** | se inventa cantidad, precio y fecha; solo pregunta por el exchange |
+| 9 | **OK** | responde en inglés con el valor correcto (añade "$" por su cuenta) |
+
+Resultado: **6/9 OK** (0/9 antes). La lectura funciona; las tres escrituras siguen fallando con el modelo de 3B,
+sin proponer ni guardar nada incorrecto.
 Ejecución: `MafAgentModelChecklistTests` (`Category=Manual`) sobre la app real y el Postgres de desarrollo, con
 Ollama y `qwen2.5:3b-instruct`, una conversación nueva por caso. **Ningún caso escribió datos ni dejó una acción
 pendiente con datos inventados**: las garantías deterministas aguantan. El fallo es de seguimiento de

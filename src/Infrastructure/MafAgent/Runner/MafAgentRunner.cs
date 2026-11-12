@@ -40,20 +40,29 @@ internal sealed class MafAgentRunner(
 {
     internal const string AgentName = "PortfolioMafAgent";
 
-    // The four rules of plan §0 "Instrucciones del agente", plus how to read the tools.
+    // The four rules of plan §0 "Instrucciones del agente", plus how to read the tools. Written as short, explicit
+    // rules: the T035 checklist showed a small local model inventing ids and values and switching language.
     internal const string Instructions =
-        "You are a portfolio management assistant for the authenticated user. Use ONLY the provided tools for data; " +
-        "never invent ids or values that a tool did not return, and report numbers exactly as the tools give them.\n" +
-        "1. Always answer in the same language as the user's last message.\n" +
-        "2. Deleting anything (portfolios, entries, notes) and creating or editing cryptocurrencies or exchanges is " +
-        "not supported in this version: say so plainly and propose nothing.\n" +
-        "3. Writes are only PROPOSED with the Propose* tools; nothing changes until the user confirms the returned " +
-        "pending action by its id outside this chat. Tell the user what was proposed and that it needs confirmation. " +
-        "If a Propose* tool returns MissingOrAmbiguous:<field>, ask the user for that field and propose nothing. " +
-        "UnknownCatalogItem:<value> means the asset or exchange does not exist in the catalog. NotFound means the " +
-        "resource does not exist or is not the user's.\n" +
-        "4. Resolve relative dates (yesterday, last Monday, this month) in the Europe/Madrid time zone from the local " +
-        "time given in the context, and pass tools the equivalent UTC instant with a Z suffix.";
+        "You are a portfolio management assistant for the authenticated user. Use ONLY the provided tools for data, " +
+        "and report numbers exactly as the tools give them.\n" +
+        "1. LANGUAGE: answer in the language of the user's LAST message. If the user writes in Spanish, answer in " +
+        "Spanish; if in English, in English. Never switch language.\n" +
+        "2. NOT SUPPORTED: deleting anything (portfolios, entries, notes) and creating or editing cryptocurrencies or " +
+        "exchanges is not supported in this version. Say so in one sentence and stop: propose nothing, and never " +
+        "offer a confirmation phrase, a workaround or a deletion.\n" +
+        "3. IDS: never guess an id. Portfolio ids are listed in the context of each turn (or call ListMyPortfolios); " +
+        "use the id whose name matches what the user said. Entry ids come from GetPortfolioEntries, note ids from " +
+        "ListNotes.\n" +
+        "4. MISSING DATA: never fill in a value the user did not give (quantity, price, asset symbol, exchange, date, " +
+        "name, title, content). Call the Propose* tool with only what the user gave; when it returns " +
+        "MissingOrAmbiguous:<field>, ask the user for that field. An entry ALWAYS needs the asset symbol (e.g. BTC). " +
+        "UnknownCatalogItem:<value> means that asset or exchange does not exist. NotFound means it does not exist or " +
+        "is not the user's.\n" +
+        "5. WRITES: you only PROPOSE them. Nothing changes until the user confirms the pending action with the " +
+        "confirm button of the app, never by writing in this chat. Tell the user what you proposed.\n" +
+        "6. DATES: resolve relative dates (yesterday, last Monday, this month) in the Europe/Madrid time zone from the " +
+        "local time given in the context. For a day without a time pass yyyy-MM-dd; for an exact time pass the UTC " +
+        "instant with a Z suffix.";
 
     // Marks the per-turn time message. Only the current one is kept in the history: older ones would leave the
     // model several conflicting "current" times (and grow the session on every turn).
@@ -78,7 +87,8 @@ internal sealed class MafAgentRunner(
         AgentResponse response;
         try
         {
-            response = await agent.RunAsync([TimeContext(), new ChatMessage(ChatRole.User, message)], session, cancellationToken: ct);
+            ChatMessage context = await TurnContextAsync(ct);
+            response = await agent.RunAsync([context, new ChatMessage(ChatRole.User, message)], session, cancellationToken: ct);
         }
         catch (Exception exception) when (IsInferenceTimeout(exception, ct))
         {
@@ -135,12 +145,20 @@ internal sealed class MafAgentRunner(
         return await agent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: ct);
     }
 
-    private ChatMessage TimeContext()
+    // The time of the turn (AC19) and the user's own portfolios with their ids, so the model never has to guess an id.
+    private async Task<ChatMessage> TurnContextAsync(CancellationToken ct)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        object listed = await readTools.ListMyPortfolios(ct);
+        IReadOnlyList<MafPortfolioSummary> portfolios = listed as IReadOnlyList<MafPortfolioSummary> ?? [];
+        string portfolioList = portfolios.Count == 0
+            ? "the user has no portfolios yet"
+            : string.Join("; ", portfolios.Select(p => $"id {p.Id} = \"{p.Name}\""));
+
         return new ChatMessage(ChatRole.System,
             $"{TimeContextMarker} current time {BusinessTime.FormatUtc(utcNow)} (UTC); " +
-            $"local business time {BusinessTime.FormatLocal(utcNow)}; business time zone id {BusinessTime.ZoneId}.");
+            $"local business time {BusinessTime.FormatLocal(utcNow)}; business time zone id {BusinessTime.ZoneId}. " +
+            $"The user's portfolios: {portfolioList}.");
     }
 
     private async ValueTask<object?> CountAndLogToolCallAsync(

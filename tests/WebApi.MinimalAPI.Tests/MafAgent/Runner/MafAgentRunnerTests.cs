@@ -37,6 +37,7 @@ public sealed class MafAgentRunnerTests
     private readonly ICurrentUserProvider _currentUser = Substitute.For<ICurrentUserProvider>();
     private readonly IPendingActionRepository _actions = Substitute.For<IPendingActionRepository>();
     private readonly ListLogger<MafAgentRunner> _logger = new();
+    private readonly IPortfolioRepository _portfolios = Substitute.For<IPortfolioRepository>();
     private readonly AiOptions _options = new() { MaxAllowedToolLoops = 5 };
     private readonly MafConversation _conversation;
 
@@ -55,6 +56,7 @@ public sealed class MafAgentRunnerTests
                 Data = [new NoteResponse("n1", "Ideas", "Título", "contenido-de-nota-secreto", DateTime.UtcNow, true)],
             }));
         _conversation = MafConversation.Create(UserId, "enc:", _time.GetUtcNow().UtcDateTime);
+        PortfoliosAre([]);
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -62,13 +64,16 @@ public sealed class MafAgentRunnerTests
     private MafAgentRunner Runner(IChatClient chatClient)
     {
         PendingActionFactory factory = new(_encryption, _currentUser, _time);
-        MafAgentReadTools read = new(Substitute.For<IPortfolioRepository>(), Substitute.For<IPortfolioEntryRepository>(), _sender, _currentUser, _time);
+        MafAgentReadTools read = new(_portfolios, Substitute.For<IPortfolioEntryRepository>(), _sender, _currentUser, _time);
         MafAgentProposeTools propose = new(factory, _actions, Substitute.For<ICurrentValuesReader>(), _sender, _time);
         IMafChatClientFactory clients = Substitute.For<IMafChatClientFactory>();
         clients.Create().Returns(chatClient);
         return new MafAgentRunner(clients, read, propose, Options.Create(_options), _time, _logger);
     }
 
+    private void PortfoliosAre(Portfolio[] portfolios) =>
+        _portfolios.GetAllAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<System.Linq.Expressions.Expression<Func<Portfolio, bool>>>(), Arg.Any<CancellationToken>())
+            .Returns(new PaginatorResponse<Portfolio> { Page = 1, PageSize = 50, Total = portfolios.Length, TotalPages = 1, Data = portfolios });
     private static ScriptedChatClient AnswersWith(string text) => new((_, _) => ScriptedChatClient.Text(text));
 
     // ---- tools and instructions ----
@@ -95,7 +100,7 @@ public sealed class MafAgentRunnerTests
         await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
 
         string instructions = model.Calls[0].Options!.Instructions!;
-        instructions.Should().Contain("same language", "rule 1: answer in the language of the user's last message");
+        instructions.Should().Contain("language of the user's LAST message", "rule 1: answer in the language of the user's last message");
         instructions.Should().Contain("not supported", "rule 2: deleting or writing catalogs is explained as unsupported");
         instructions.Should().Contain("MissingOrAmbiguous", "rule 3: ask for the missing field");
         instructions.Should().Contain("Europe/Madrid", "rule 4: relative dates are resolved in Madrid");
@@ -116,6 +121,30 @@ public sealed class MafAgentRunnerTests
         model.Calls[0].Messages.Last().Text.Should().Be("¿qué pasó ayer?");
     }
 
+    [Fact]
+    public async Task EachTurn_ListsTheUsersPortfoliosWithTheirRealIds_SoTheModelNeverGuessesThem()
+    {
+        Portfolio main = Portfolio.Create(UserId, "Principal", "");
+        typeof(Portfolio).BaseType!.GetProperty(nameof(Portfolio.Id))!.SetValue(main, 41L);
+        PortfoliosAre([main]);
+        ScriptedChatClient model = AnswersWith("hola");
+
+        await Runner(model).RunTurnAsync(_conversation, "", "¿cuánto vale Principal?", Token);
+
+        string context = model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text;
+        context.Should().Contain("id 41 = \"Principal\"");
+    }
+
+    [Fact]
+    public async Task AUserWithoutPortfolios_IsToldSoInTheContext()
+    {
+        ScriptedChatClient model = AnswersWith("hola");
+
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+
+        model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text
+            .Should().Contain("the user has no portfolios yet");
+    }
     [Fact]
     public async Task TheReply_IsTheModelsFinalText()
     {
