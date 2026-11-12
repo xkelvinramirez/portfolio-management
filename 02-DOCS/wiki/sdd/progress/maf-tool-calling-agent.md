@@ -312,3 +312,31 @@ slug: maf-tool-calling-agent
 - minor #3 aceptado: los parámetros `= null` aparecen como opcionales en el esquema; encaja con `MissingOrAmbiguous`.
 - **Decisión del usuario (2026-11-12):** una fecha SIN hora que llega a una herramienta es ese día a las 00:00 UTC (entradas y periodo del informe), no la medianoche de Madrid. Una regla única en `TryParseInstant`; se elimina `TryParsePeriodBound`. Anotada en plan §0 "Payloads tipados" y en `harness/decisions.md`.
 - 10 mutantes de los arreglos, todos detectados. unit 449/449; integración 11/11.
+## Rama PR5 — 2026-11-12
+- `feature/maf-tool-calling-agent-pr5` creada por decisión del usuario, apilada sobre la pr4 (`e2cba62`). Alcance: T031–T036.
+
+## T031–T032 — 2026-11-12
+- status: complete
+- red: 17/18 con 404 (rutas ausentes). green: 18/18; unit 467/467; integración 11/11.
+- mutantes: 4, todos detectados.
+- decisiones: grupo `/api/v1/MafAgent/`, etiqueta `MafAgent`, `RequireAuthorization`. `confirm` envía el comando SIN token (cierra la pauta de la revisión T017–T020). `reject` → 204. Sin `Idempotency-Key` (desviación aceptada, analyze F5). Los tests siembran acciones con `PendingAction.Create` y el `IEncryptionService` real del host.
+- files: src/WebApi.MinimalAPI/Endpoints/{MafAgent/MafAgentEndpoints.cs,Common/EndpointRegistrar.cs,Common/EndpointTags.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/Http/MafAgentEndpointsTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T031-T032.md)
+## T031–T032 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin importantes. Corregidos en el commit de T033: test de `confirm` sin token (antes ningún test lo protegía), rechazar dos veces → 409 e id inexistente → 404, reinicio del doble del runner en cada test. Aceptado: el test de AC4 por HTTP no puede fallar por un defecto del runner (eso lo cubren las herramientas).
+
+## T033 — 2026-11-12
+- status: complete
+- green: 1/1 contra el Postgres de desarrollo; integración 12/12; unit 469/469.
+- control: 2 mutantes (sesión no restaurada, id no real), ambos detectados.
+- decisiones: host propio `PostgresHost` (WebApplicationFactory) con el registro real y solo el modelo y los sistemas externos dobles; `DevDatabase.ConnectionStringValue` para configurarlo. El test crea y borra su usuario y sus filas de catálogo.
+- files: tests/WebApi.MinimalAPI.Tests/MafAgent/{Restart/MafAgentRestartTests.cs,Persistence/DevDatabase.cs,Http/MafAgentEndpointsTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T033.md)
+## T034–T036 — 2026-11-12
+- T034 complete: sin cambios en `*/Agent/` ni en SemanticKernel frente a `development`; `SkAgentRegressionTests` 11/11; versiones = las aprobadas en T001.
+- T035 **parcial**: `docs/maf-agent-flow.md` creado; checklist manual con Ollama NO ejecutada (Ollama no respondía en localhost:11434). Los 9 casos quedan PENDIENTE en el doc.
+- T036: gate verde (format, build, unit 469/469, integración 12/12), pero el veredicto es FAIL hasta ejecutar la checklist de T035.
+- verify: FAIL (solo T035) (verifications/maf-tool-calling-agent-2026-11-12-T034-T036.md)
+## T035 — checklist con modelo real — 2026-11-12
+- ejecutada con Ollama `qwen2.5:3b-instruct` (`MafAgentModelChecklistTests`, Category=Manual): 9/9 FALLO. Ids inventados (`portfolioId: 1`) en vez de `ListMyPortfolios`, datos inventados en vez de preguntar, símbolo omitido, idioma, confirmación de borrado ofrecida por texto. Sin escrituras ni acciones con datos inventados. Pendiente de decisión del usuario: reforzar instrucciones/herramientas o cambiar de modelo.
