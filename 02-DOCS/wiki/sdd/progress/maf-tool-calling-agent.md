@@ -235,3 +235,8 @@ slug: maf-tool-calling-agent
 - decisiones: `RejectPendingActionCommand : IRequest<ErrorOr<Success>>` (el endpoint devolverá 204). **No es `ICommand`**: `TryRejectAsync` hace su propio commit y no queda nada para la UoW; la entidad cargada nunca se modifica, así la UoW no puede pisar un confirm concurrente. Mismo orden de comprobaciones que confirmar. Rechazar **no añade nota a la sesión**: ni el spec ni el plan la piden, y si el usuario pregunta, el agente puede consultar el estado. Se puede revisar en T023/T028 si hace falta.
 - files: src/Application/MafAgent/Command/{RejectPendingActionCommandHandler,RejectPendingActionCommandValidator}.cs, tests/Application.Tests/MafAgent/RejectPendingActionCommandHandlerTests.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T021-T022.md)
+## T021–T022 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado sin defecto: paridad del WHERE de `TryRejectAsync` con el handler (`now >= ExpiresAt` frente a `ExpiresAt > now`), nada pasa por la UoW ni por la caché, y el validador se registra.
+- minor #1 corregido: el mutante que quita la comprobación de dueño de la conversación sobrevivía; test nuevo (acción propia en conversación ajena) lo detecta. unit 312/312.
+- minor #2 aceptado: la caducidad de la conversación por inactividad no está en el SQL atómico; un rechazo que cruza el límite de 24 h a la vez sigue siendo inocuo (no escribe datos de negocio). Confirmar tiene la misma forma.

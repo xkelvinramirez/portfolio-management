@@ -135,6 +135,22 @@ public class RejectPendingActionCommandHandlerTests
     }
 
     [Fact]
+    public async Task CallersAction_InsideAnotherUsersConversation_IsStillNotFound()
+    {
+        // Defence in depth: the conversation's owner is checked too, not only the action's.
+        MafConversation foreign = MafConversation.Create(8L, "enc:{}", Now);
+        _conversations.GetByIdAsync(foreign.Id, Arg.Any<CancellationToken>()).Returns(foreign);
+        PendingAction action = _factory.Create(
+            foreign.Id, PendingActionOperation.CreatePortfolio, new CreatePortfolioPayload("Largo plazo", "Holdings"), null);
+        _actions.GetByIdAsync(action.Id, Arg.Any<CancellationToken>()).Returns(action);
+
+        ErrorOr<Success> result = await Reject(action.Id);
+
+        result.FirstError.Code.Should().Be("MafAgent.PendingAction.NotFound");
+        await NotRejectedAtomically();
+    }
+
+    [Fact]
     public async Task ActionWhoseConversationIsGone_IsNotFound()
     {
         PendingAction action = Stored();
