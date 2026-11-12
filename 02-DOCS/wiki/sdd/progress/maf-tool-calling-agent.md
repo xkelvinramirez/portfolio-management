@@ -333,3 +333,8 @@ slug: maf-tool-calling-agent
 - decisiones: host propio `PostgresHost` (WebApplicationFactory) con el registro real y solo el modelo y los sistemas externos dobles; `DevDatabase.ConnectionStringValue` para configurarlo. El test crea y borra su usuario y sus filas de catálogo.
 - files: tests/WebApi.MinimalAPI.Tests/MafAgent/{Restart/MafAgentRestartTests.cs,Persistence/DevDatabase.cs,Http/MafAgentEndpointsTests.cs}
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T033.md)
+## T034–T036 — 2026-11-12
+- T034 complete: sin cambios en `*/Agent/` ni en SemanticKernel frente a `development`; `SkAgentRegressionTests` 11/11; versiones = las aprobadas en T001.
+- T035 **parcial**: `docs/maf-agent-flow.md` creado; checklist manual con Ollama NO ejecutada (Ollama no respondía en localhost:11434). Los 9 casos quedan PENDIENTE en el doc.
+- T036: gate verde (format, build, unit 469/469, integración 12/12), pero el veredicto es FAIL hasta ejecutar la checklist de T035.
+- verify: FAIL (solo T035) (verifications/maf-tool-calling-agent-2026-11-12-T034-T036.md)
