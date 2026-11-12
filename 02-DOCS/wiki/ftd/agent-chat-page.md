@@ -1,7 +1,9 @@
 ---
 author: kramirez
 branch: agent-chat-page
-status: in-progress
+status: done
+merged: 2026-11-06
+pr: #17
 ---
 # Página de chat con el agente
 
@@ -65,7 +67,4 @@ respuestas pueden tardar bastante (Ollama local en CPU, `RequestTimeoutSeconds=2
   historial largo, y el estado de error ante un timeout real del agente.
 
 ## Next
-
-Hecho el checklist (ver pendiente de verificación manual arriba). Falta: `dotnet build`/`dotnet test`
-del backend no aplica (sin cambios ahí); revisar el diff completo y decidir si se abre PR desde la
-rama `agent-chat-page` hacia `development`.
+Fusionado en master el 2026-11-06 (4e08b1a).
