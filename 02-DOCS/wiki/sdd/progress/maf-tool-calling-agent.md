@@ -262,3 +262,22 @@ slug: maf-tool-calling-agent
 - decisiones: `MafAgentReadTools` (internal sealed, `Infrastructure/MafAgent/Tools`) separado de las herramientas de propuesta (T028); `MafAgentTools` las compondrá. Las 5 heredadas replican el código del plugin SK (no se comparte: `*/Agent/` no se toca) con `TimeProvider` en vez de `DateTime.UtcNow` y `CultureInfo.InvariantCulture` en los límites opcionales del pico (el plugin usa la cultura actual; en `yyyy-MM-dd` coinciden). Errores como texto para el modelo: `NotFound`, `InvalidDates` (el plugin SK lanza `ArgumentException`). El resto usa las consultas existentes por `ISender` recorriendo todas las páginas (límite 100). `ListExchanges` no expone `ApiKey`; `ListNotes` no expone el contenido. Records de salida propios (`Maf*`), no los del plugin SK.
 - files: src/Infrastructure/MafAgent/Tools/MafAgentReadTools.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/MafAgentReadToolsTests.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T025-T026.md)
+## T025–T026 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado: los handlers de entries, history y allocation filtran por dueño; ni la `ApiKey` del exchange ni el contenido de las notas del listado llegan al modelo; la paginación no se queda en bucle.
+- minor corregido: el test de historial no comprobaba la fecha de cada punto (ahora sí, en el commit de T027–T028).
+- minor aceptados: el pico usa cultura invariante (el plugin SK la actual; coinciden en `yyyy-MM-dd`); un error de validación de una consulta se devuelve al modelo como `NotFound`; los listados no tienen tope (el plan no lo pide).
+
+## T027–T028 — 2026-11-12
+- status: complete
+- red: CS0246 (`MafAgentProposeTools` ausente). green: 43/43; lectura 32/32; unit 411/411; integración 11/11.
+- mutantes: 19, todos detectados (2 tras añadir tests).
+- decisiones:
+  - **Desviación del plan §0 "Payloads tipados":** las fechas de las herramientas son `string`, no `DateTimeOffset`. System.Text.Json leería una fecha sin offset con la zona del SERVIDOR, y la regla es Madrid. La herramienta interpreta: con `Z`/offset ese instante; sin offset hora de Madrid (una hora inexistente por el cambio de verano → `MissingOrAmbiguous`). El payload sigue con `Kind=Utc`.
+  - Parámetros nullable: un dato que falta da `MissingOrAmbiguous:<campo>` en vez de un error de enlace de argumentos. En las ediciones, un valor en blanco cuenta como "no cambia".
+  - `Before` = la salida de `ICurrentValuesReader`, la misma fuente que la comprobación de desfase al confirmar; la fusión parsea esos valores ("G29", "O").
+  - Dueño por `GetPortfolioByIdQuery` (ya lo comprueba): las herramientas no usan repositorios de negocio.
+  - `BeginTurn(conversationId)` lo llamará el runner (T030) antes de cada turno; `ProposedActions` son las instancias preparadas.
+  - Paginación compartida en `ToolPaging` (refactor de las herramientas de lectura, sin cambio de comportamiento).
+- files: src/Infrastructure/MafAgent/Tools/{MafAgentProposeTools,ToolPaging,MafAgentReadTools}.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/{MafAgentProposeToolsTests,MafAgentReadToolsTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T027-T028.md)

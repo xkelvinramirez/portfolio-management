@@ -62,7 +62,6 @@ internal sealed class MafAgentReadTools(
     public const string InvalidDates = "InvalidDates";
 
     private const string DateFormat = "yyyy-MM-dd";
-    private const int PageLimit = 100;
     private const string PortfolioIdHint = "The portfolio id, as returned by ListMyPortfolios";
 
     public IReadOnlyList<AIFunction> GetTools() =>
@@ -210,7 +209,7 @@ internal sealed class MafAgentReadTools(
         [Description(PortfolioIdHint)] long portfolioId,
         CancellationToken cancellationToken = default)
     {
-        ErrorOr<List<MafEntry>> entries = await ReadAllPagesAsync(
+        ErrorOr<List<MafEntry>> entries = await ToolPaging.ReadAllAsync(
             paginator => sender.Send(new GetPortfolioEntriesQuery(portfolioId, paginator), cancellationToken),
             e => new MafEntry(e.Id, e.CryptoCurrencyId, e.ExchangeId, e.Quantity, e.PricePerUnit, e.RecordedAt));
         return entries.IsError ? NotFound : entries.Value;
@@ -262,7 +261,7 @@ internal sealed class MafAgentReadTools(
     [Description("Lists the cryptocurrency catalog (id, symbol, name).")]
     public async Task<object> ListCryptoCurrencies(CancellationToken cancellationToken = default)
     {
-        ErrorOr<List<MafCryptoCurrency>> items = await ReadAllPagesAsync(
+        ErrorOr<List<MafCryptoCurrency>> items = await ToolPaging.ReadAllAsync(
             paginator => sender.Send(new GetCryptoCurrenciesQuery(paginator), cancellationToken),
             c => new MafCryptoCurrency(c.Id, c.Symbol, c.Name));
         return items.IsError ? NotFound : items.Value;
@@ -271,7 +270,7 @@ internal sealed class MafAgentReadTools(
     [Description("Lists the exchange catalog (id, name).")]
     public async Task<object> ListExchanges(CancellationToken cancellationToken = default)
     {
-        ErrorOr<List<MafExchange>> items = await ReadAllPagesAsync(
+        ErrorOr<List<MafExchange>> items = await ToolPaging.ReadAllAsync(
             paginator => sender.Send(new GetExchangesQuery(paginator), cancellationToken),
             e => new MafExchange(e.Id, e.Name));
         return items.IsError ? NotFound : items.Value;
@@ -280,7 +279,7 @@ internal sealed class MafAgentReadTools(
     [Description("Lists the notes (id, category, title, active flag, created at) without their content. Use GetNote to read one note's content.")]
     public async Task<object> ListNotes(CancellationToken cancellationToken = default)
     {
-        ErrorOr<List<MafNoteSummary>> notes = await ReadAllPagesAsync(
+        ErrorOr<List<MafNoteSummary>> notes = await ToolPaging.ReadAllAsync(
             paginator => sender.Send(new GetNotesQuery(paginator, null, null), cancellationToken),
             n => new MafNoteSummary(n.Id, n.Category, n.Title, n.IsActive, n.CreatedAt));
         return notes.IsError ? NotFound : notes.Value;
@@ -313,29 +312,6 @@ internal sealed class MafAgentReadTools(
                 group => group.Key,
                 group => group.Sum(entry => entry.Quantity * entry.PricePerUnit),
                 StringComparer.OrdinalIgnoreCase);
-
-    private static async Task<ErrorOr<List<TOut>>> ReadAllPagesAsync<TIn, TOut>(
-        Func<PaginatorRequest, Task<ErrorOr<PaginatorResponse<TIn>>>> readPage, Func<TIn, TOut> map)
-    {
-        List<TOut> all = [];
-        int page = 1;
-        int totalPages;
-        do
-        {
-            ErrorOr<PaginatorResponse<TIn>> result = await readPage(new PaginatorRequest(page, PageLimit));
-            if (result.IsError)
-            {
-                return result.Errors;
-            }
-
-            all.AddRange(result.Value.Data.Select(map));
-            totalPages = result.Value.TotalPages;
-            page++;
-        }
-        while (page <= totalPages);
-
-        return all;
-    }
 
     // Never trust a model-supplied id: the portfolio must belong to the authenticated user.
     private async Task<Portfolio?> GetOwnedPortfolioOrNullAsync(long portfolioId, CancellationToken cancellationToken)

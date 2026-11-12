@@ -244,7 +244,11 @@ public sealed class MafAgentReadToolsTests
         object ranged = await _tools.GetPortfolioHistory(PortfolioId, "2026-10-15", "2026-11-01", Token);
 
         ((IEnumerable<object>)all).Should().HaveCount(3);
-        ranged.Should().BeEquivalentTo(new[] { new { Value = 2m }, new { Value = 3m } }, o => o.WithStrictOrdering());
+        ranged.Should().BeEquivalentTo(new[]
+        {
+            new { Date = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc), Value = 2m },
+            new { Date = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), Value = 3m },
+        }, o => o.WithStrictOrdering());
         (await _tools.GetPortfolioHistory(PortfolioId, "2026-10-02", "2026-10-31", Token))
             .Should().BeEquivalentTo(new[] { new { Value = 2m } });
         await _sender.Received().Send(Arg.Is<GetPortfolioHistoryQuery>(q => q.Id == PortfolioId), Arg.Any<CancellationToken>());
