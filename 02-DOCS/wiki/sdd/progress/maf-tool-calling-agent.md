@@ -340,3 +340,15 @@ slug: maf-tool-calling-agent
 - verify: FAIL (solo T035) (verifications/maf-tool-calling-agent-2026-11-12-T034-T036.md)
 ## T035 — checklist con modelo real — 2026-11-12
 - ejecutada con Ollama `qwen2.5:3b-instruct` (`MafAgentModelChecklistTests`, Category=Manual): 9/9 FALLO. Ids inventados (`portfolioId: 1`) en vez de `ListMyPortfolios`, datos inventados en vez de preguntar, símbolo omitido, idioma, confirmación de borrado ofrecida por texto. Sin escrituras ni acciones con datos inventados. Pendiente de decisión del usuario: reforzar instrucciones/herramientas o cambiar de modelo.
+
+## T035 — refuerzo y segunda ejecución — 2026-11-12
+- decisión del usuario: reforzar y repetir. Cambios en `MafAgentRunner`: el contexto de cada turno lista los portafolios del usuario con su id real (`ListMyPortfolios`) y las instrucciones pasan a reglas cortas y explícitas (idioma, no adivinar ids, no inventar datos, símbolo obligatorio, sin confirmaciones ni borrados por texto, fecha sin hora como yyyy-MM-dd). Tests del runner 22/22.
+- segunda ejecución con `qwen2.5:3b-instruct`: 6/9 OK (lectura completa). FALLO en 6 (omite el símbolo), 7 (repite una frase de las instrucciones) y 8 (inventa datos). Ninguna escritura ni propuesta incorrecta.
+- siguiente (decisión del usuario): repetir con `qwen2.5:7b-instruct`. El test manual acepta `MAF_CHECKLIST_MODEL`.
+
+## T035–T036 — tercera ejecución y cierre — 2026-11-12
+- tercera ejecución con `qwen2.5:7b-instruct`, mismo código que a77e8ae: **9/9 OK** (incluidas las tres escrituras: propone `CreateEntry` completo, rechaza borrar sin ofrecer nada, no inventa datos y pide el que falta).
+- decisión del usuario: `qwen2.5:7b-instruct` es el modelo local mínimo; queda en sus user-secrets (`Ai:ReasoningModel:ModelId`), no en el repo. `appsettings.Development.json` sigue con 3B.
+- mejora opcional pendiente: devolver todos los campos que faltan a la vez.
+- gate: format, build, unit 471/471, integración 12/12.
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T035-T036.md)

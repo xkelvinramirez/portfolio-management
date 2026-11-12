@@ -129,6 +129,10 @@ Reutiliza la sección `Ai` (`AiOptions`) y el modelo de razonamiento (`Ai:Reason
   (por ejemplo `http://localhost:11434/v1`); sin él la app falla en vez de llamar a api.openai.com.
 - `Ai:Provider = AzureOpenAI` → cliente de Azure con `Ai:ReasoningModel:DeploymentName` y `Endpoint` obligatorio.
 - Claves y cadenas de conexión solo con `dotnet user-secrets`.
+- Modelo local recomendado: `qwen2.5:7b-instruct` como mínimo para `Ai:ReasoningModel:ModelId` (ver la checklist
+  de T035). `appsettings.Development.json` trae `qwen2.5:3b-instruct`; para usar el de 7B en tu máquina:
+  `dotnet user-secrets set "Ai:ReasoningModel:ModelId" "qwen2.5:7b-instruct" --project src/WebApi.MinimalAPI`.
+  La sección `Ai` es compartida, así que el agente SK también usa ese modelo.
 
 ## Decisiones
 
@@ -142,7 +146,8 @@ Reutiliza la sección `Ai` (`AiOptions`) y el modelo de razonamiento (`Ai:Reason
 
 ## Comprobación manual con un modelo real (T035)
 
-Con Ollama y `qwen2.5:3b-instruct`. No se ejecuta en CI: el modelo no es determinista.
+Con Ollama: `qwen2.5:3b-instruct` en las dos primeras ejecuciones y `qwen2.5:7b-instruct` en la tercera. No se
+ejecuta en CI: el modelo no es determinista.
 
 | # | Mensaje | Esperado | Resultado (2026-11-12, primera ejecución) |
 | --- | --- | --- | --- |
@@ -156,7 +161,50 @@ Con Ollama y `qwen2.5:3b-instruct`. No se ejecuta en CI: el modelo no es determi
 | 8 | "Registra una compra de BTC …" | pide los datos que faltan; sin propuesta | **FALLO**: se inventa cantidad, precio y fecha en vez de preguntar (no llega a proponer porque omite el símbolo) |
 | 9 | "How much is my Principal portfolio worth right now?" | responde en inglés | **FALLO**: inglés correcto, id inventado |
 
+### Segunda ejecución (2026-11-12, tras reforzar el agente)
+
+Cambios: el contexto de cada turno lista los portafolios del usuario con su id real, y las instrucciones son
+reglas cortas y explícitas (idioma, no inventar ids ni datos, símbolo obligatorio, sin confirmaciones por texto).
+Mismo modelo, `qwen2.5:3b-instruct`.
+
+| # | Resultado | Detalle |
+| --- | --- | --- |
+| 1 | **OK** | `ListMyPortfolios`; responde en español |
+| 2 | **OK** | `GetPortfolioValue` con el id real; valor = el de la herramienta (añade "euros" por su cuenta) |
+| 3 | **OK** | `GetPortfolioHoldings`; BTC 40.000 |
+| 4 | **OK** | `GetAssetPeakOrTroughDate`; 2026-01-01, 45.000 |
+| 5 | **OK** | `GetPortfolioAssetValueComparison`; BTC 45.000→40.000, ETH 12.000→10.000 |
+| 6 | **FALLO** | id y fecha bien (`2026-11-11T00:00:00Z`), pero omite el símbolo: no propone y pide el símbolo |
+| 7 | **FALLO** | no propone nada, pero responde repitiendo una frase de sus instrucciones |
+| 8 | **FALLO** | se inventa cantidad, precio y fecha; solo pregunta por el exchange |
+| 9 | **OK** | responde en inglés con el valor correcto (añade "$" por su cuenta) |
+
+Resultado: **6/9 OK** (0/9 antes). La lectura funciona; las tres escrituras siguen fallando con el modelo de 3B,
+sin proponer ni guardar nada incorrecto.
 Ejecución: `MafAgentModelChecklistTests` (`Category=Manual`) sobre la app real y el Postgres de desarrollo, con
 Ollama y `qwen2.5:3b-instruct`, una conversación nueva por caso. **Ningún caso escribió datos ni dejó una acción
 pendiente con datos inventados**: las garantías deterministas aguantan. El fallo es de seguimiento de
 instrucciones del modelo de 3B (ids inventados, datos inventados, idioma).
+
+### Tercera ejecución (2026-11-12, `qwen2.5:7b-instruct`)
+
+Mismo código y mismas instrucciones que la segunda ejecución; solo cambia el modelo (`MAF_CHECKLIST_MODEL`).
+
+| # | Resultado | Detalle |
+| --- | --- | --- |
+| 1 | **OK** | `ListMyPortfolios`; responde en español |
+| 2 | **OK** | `GetPortfolioValue` con el id real; 107.000, el valor de la herramienta |
+| 3 | **OK** | `GetPortfolioHoldings`; BTC 40.000 (añade "euros" por su cuenta) |
+| 4 | **OK** | `GetAssetPeakOrTroughDate`; 2026-01-01, 45.000 |
+| 5 | **OK** | `GetPortfolioAssetValueComparison`; BTC 45.000→40.000, ETH 12.000→10.000 |
+| 6 | **OK** | propone `CreateEntry` con BTC, el exchange, 0.5, 60000 y `2026-11-11T00:00:00Z`; dice que falta confirmar |
+| 7 | **OK** | dice que borrar no está soportado; no propone nada ni ofrece confirmación por texto |
+| 8 | **OK** | llama a la herramienta sin inventar datos y pide el exchange; no propone nada |
+| 9 | **OK** | responde en inglés con el valor correcto |
+
+Resultado: **9/9 OK**. Detalles menores de redacción, sin efecto en los datos: añade la moneda por su cuenta, en el
+caso 8 dice "Propuse…" aunque no propuso nada, y pide los datos que faltan de uno en uno (la herramienta devuelve
+solo el primer campo que falta).
+
+**Conclusión:** `qwen2.5:7b-instruct` es el modelo local mínimo recomendado para el agente MAF. Con
+`qwen2.5:3b-instruct` la lectura funciona, pero las propuestas de escritura no son fiables.

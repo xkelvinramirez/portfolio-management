@@ -27,7 +27,7 @@ using User = Domain.Entities.User;
 namespace WebApi.MinimalAPI.Tests.MafAgent.Manual;
 
 /// <summary>
-/// Plan T035: the manual checklist with a REAL model (Ollama, qwen2.5:3b-instruct on localhost:11434) over the
+/// Plan T035: the manual checklist with a REAL model (Ollama on localhost:11434, MAF_CHECKLIST_MODEL) over the
 /// real app and the development Postgres. Not run by the gate (Category=Manual): the model is not deterministic.
 /// It seeds a test user, runs each checklist message in a new conversation and writes, per case, the reply, the
 /// tools the model called and the proposed actions to MAF_CHECKLIST_OUT (or a temp file) for a human verdict.
@@ -36,6 +36,9 @@ namespace WebApi.MinimalAPI.Tests.MafAgent.Manual;
 [Collection(DevDatabaseCollection.Name)]
 public sealed class MafAgentModelChecklistTests : IAsyncLifetime
 {
+    // Model under test: MAF_CHECKLIST_MODEL (default qwen2.5:3b-instruct), served by Ollama on localhost:11434.
+    private static readonly string Model = Environment.GetEnvironmentVariable("MAF_CHECKLIST_MODEL") ?? "qwen2.5:3b-instruct";
+
     private readonly List<long> _createdCryptoIds = [];
     private readonly List<long> _createdExchangeIds = [];
     private long _userId;
@@ -96,7 +99,7 @@ public sealed class MafAgentModelChecklistTests : IAsyncLifetime
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, _userId.ToString());
 
         StringBuilder transcript = new();
-        transcript.AppendLine($"# MAF checklist — {DateTime.UtcNow:O} — model qwen2.5:3b-instruct");
+        transcript.AppendLine($"# MAF checklist — {DateTime.UtcNow:O} — model {Model}");
         for (int i = 0; i < messages.Length; i++)
         {
             recorder.ToolCalls.Clear();
@@ -198,9 +201,9 @@ public sealed class MafAgentModelChecklistTests : IAsyncLifetime
             builder.UseSetting("CosmosDb:ContainerName", "Notes");
             builder.UseSetting("CoinGecko:BaseUrl", "https://unused.invalid/");
             builder.UseSetting("Ai:Provider", "Ollama");
-            builder.UseSetting("Ai:ReasoningModel:ModelId", "qwen2.5:3b-instruct");
+            builder.UseSetting("Ai:ReasoningModel:ModelId", Model);
             builder.UseSetting("Ai:ReasoningModel:Endpoint", "http://localhost:11434/v1");
-            builder.UseSetting("Ai:FastModel:ModelId", "qwen2.5:3b-instruct");
+            builder.UseSetting("Ai:FastModel:ModelId", Model);
             builder.UseSetting("Ai:FastModel:Endpoint", "http://localhost:11434/v1");
             builder.UseSetting("Ai:RequestTimeoutSeconds", "240");
             builder.UseSetting("Ai:MaxAllowedToolLoops", "5");
