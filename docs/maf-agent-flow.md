@@ -144,17 +144,19 @@ Reutiliza la sección `Ai` (`AiOptions`) y el modelo de razonamiento (`Ai:Reason
 
 Con Ollama y `qwen2.5:3b-instruct`. No se ejecuta en CI: el modelo no es determinista.
 
-| # | Mensaje | Esperado | Resultado |
+| # | Mensaje | Esperado | Resultado (2026-11-12, primera ejecución) |
 | --- | --- | --- | --- |
-| 1 | "¿Cuánto vale mi portafolio Principal?" | usa `GetPortfolioValue` y da el valor exacto | PENDIENTE |
-| 2 | "¿Qué activo vale más ahora mismo?" | usa `GetPortfolioHoldings` | PENDIENTE |
-| 3 | "¿Cuándo valió más BTC?" | usa `GetAssetPeakOrTroughDate` | PENDIENTE |
-| 4 | "¿Qué portafolios tengo?" | usa `ListMyPortfolios` | PENDIENTE |
-| 5 | "¿Cómo cambió el valor de cada activo entre el 1 de enero y el 1 de marzo?" | usa `GetPortfolioAssetValueComparison` | PENDIENTE |
-| 6 | "Registra 0.5 BTC a 60000 en Binance ayer" | propone `CreateEntry` con la fecha de ayer en ISO con `Z` | PENDIENTE |
-| 7 | "Borra el portafolio X" | explica que no está soportado; sin propuesta | PENDIENTE |
-| 8 | "Registra una compra de BTC" | pide el precio (y lo que falte); sin propuesta | PENDIENTE |
-| 9 | "How much is my portfolio worth?" | responde en inglés | PENDIENTE |
+| 1 | "¿Qué portafolios tengo?" | usa `ListMyPortfolios` y responde en español | **FALLO**: herramienta correcta, pero responde en inglés |
+| 2 | "¿Cuánto vale ahora mismo mi portafolio Principal?" | usa `GetPortfolioValue` con el id real | **FALLO**: inventa `portfolioId: 1` sin consultar el listado → `NotFound` |
+| 3 | "¿Qué activo de mi portafolio Principal vale más ahora mismo?" | usa `GetPortfolioHoldings` | **FALLO**: herramienta correcta, id inventado |
+| 4 | "¿Cuándo valió más BTC en mi portafolio Principal?" | usa `GetAssetPeakOrTroughDate` | **FALLO**: herramienta correcta, id inventado |
+| 5 | "¿Cómo cambió el valor de cada activo … entre el 1 de enero y el 1 de marzo de 2026?" | usa `GetPortfolioAssetValueComparison` | **FALLO**: herramienta y fechas correctas, id inventado |
+| 6 | "Registra 0.5 BTC a 60000 en Binance ayer …" | propone `CreateEntry` con la fecha de ayer | **FALLO**: fecha correcta (`2026-11-11T00:00:00Z`), pero omite el símbolo e inventa el id; no propone |
+| 7 | "Borra el portafolio Principal" | explica que no está soportado; sin propuesta | **FALLO**: lo dice y no propone nada, pero ofrece una "confirmación de borrado" por texto que no existe |
+| 8 | "Registra una compra de BTC …" | pide los datos que faltan; sin propuesta | **FALLO**: se inventa cantidad, precio y fecha en vez de preguntar (no llega a proponer porque omite el símbolo) |
+| 9 | "How much is my Principal portfolio worth right now?" | responde en inglés | **FALLO**: inglés correcto, id inventado |
 
-Estado: **pendiente de ejecutar**. El 2026-11-12 Ollama no respondía en `localhost:11434`. Cada caso se anota
-aquí con OK o FALLO cuando se ejecute.
+Ejecución: `MafAgentModelChecklistTests` (`Category=Manual`) sobre la app real y el Postgres de desarrollo, con
+Ollama y `qwen2.5:3b-instruct`, una conversación nueva por caso. **Ningún caso escribió datos ni dejó una acción
+pendiente con datos inventados**: las garantías deterministas aguantan. El fallo es de seguimiento de
+instrucciones del modelo de 3B (ids inventados, datos inventados, idioma).

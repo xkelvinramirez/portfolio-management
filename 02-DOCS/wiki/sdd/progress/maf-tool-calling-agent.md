@@ -338,3 +338,5 @@ slug: maf-tool-calling-agent
 - T035 **parcial**: `docs/maf-agent-flow.md` creado; checklist manual con Ollama NO ejecutada (Ollama no respondía en localhost:11434). Los 9 casos quedan PENDIENTE en el doc.
 - T036: gate verde (format, build, unit 469/469, integración 12/12), pero el veredicto es FAIL hasta ejecutar la checklist de T035.
 - verify: FAIL (solo T035) (verifications/maf-tool-calling-agent-2026-11-12-T034-T036.md)
+## T035 — checklist con modelo real — 2026-11-12
+- ejecutada con Ollama `qwen2.5:3b-instruct` (`MafAgentModelChecklistTests`, Category=Manual): 9/9 FALLO. Ids inventados (`portfolioId: 1`) en vez de `ListMyPortfolios`, datos inventados en vez de preguntar, símbolo omitido, idioma, confirmación de borrado ofrecida por texto. Sin escrituras ni acciones con datos inventados. Pendiente de decisión del usuario: reforzar instrucciones/herramientas o cambiar de modelo.
