@@ -252,3 +252,13 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass, sin hallazgos importantes. Descartado con evidencia: un turno fallido no guarda nada (`UnitOfWorkBehavior` solo guarda sin error; el `DbContext` es por petición); EF ordena las inserciones por FK aunque la conversación se añada después de las acciones; `Encrypt("")` ida y vuelta correcto; el host registra logging antes de `AddApplication`.
 - minor corregido: el mutante "texto del mensaje en el log de timeout" sobrevivía (el de límite de pasos ya lo detectaba); el test de timeout ahora lo comprueba. unit 336/336.
 - minor aceptados: dos turnos simultáneos en una conversación → gana el último en la sesión (ya aceptado en plan §6, M7, token `xmin` como mitigación futura); la propiedad "nada se guarda tras un fallo" de punta a punta la cubren T031/T033.
+## Rama PR4 — 2026-11-12
+- `feature/maf-tool-calling-agent-pr4` creada por decisión del usuario, apilada sobre la pr3 (`70190f9`). Alcance: T025–T030.
+
+## T025–T026 — 2026-11-12
+- status: complete
+- red: CS0234/CS0246 (`MafAgentReadTools` ausente). green: 32/32; unit 368/368; integración 11/11.
+- mutantes: 14, todos detectados (2 tras añadir casos).
+- decisiones: `MafAgentReadTools` (internal sealed, `Infrastructure/MafAgent/Tools`) separado de las herramientas de propuesta (T028); `MafAgentTools` las compondrá. Las 5 heredadas replican el código del plugin SK (no se comparte: `*/Agent/` no se toca) con `TimeProvider` en vez de `DateTime.UtcNow` y `CultureInfo.InvariantCulture` en los límites opcionales del pico (el plugin usa la cultura actual; en `yyyy-MM-dd` coinciden). Errores como texto para el modelo: `NotFound`, `InvalidDates` (el plugin SK lanza `ArgumentException`). El resto usa las consultas existentes por `ISender` recorriendo todas las páginas (límite 100). `ListExchanges` no expone `ApiKey`; `ListNotes` no expone el contenido. Records de salida propios (`Maf*`), no los del plugin SK.
+- files: src/Infrastructure/MafAgent/Tools/MafAgentReadTools.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/MafAgentReadToolsTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T025-T026.md)
