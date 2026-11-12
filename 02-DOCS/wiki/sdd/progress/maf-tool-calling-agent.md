@@ -322,3 +322,14 @@ slug: maf-tool-calling-agent
 - decisiones: grupo `/api/v1/MafAgent/`, etiqueta `MafAgent`, `RequireAuthorization`. `confirm` envía el comando SIN token (cierra la pauta de la revisión T017–T020). `reject` → 204. Sin `Idempotency-Key` (desviación aceptada, analyze F5). Los tests siembran acciones con `PendingAction.Create` y el `IEncryptionService` real del host.
 - files: src/WebApi.MinimalAPI/Endpoints/{MafAgent/MafAgentEndpoints.cs,Common/EndpointRegistrar.cs,Common/EndpointTags.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/Http/MafAgentEndpointsTests.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T031-T032.md)
+## T031–T032 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin importantes. Corregidos en el commit de T033: test de `confirm` sin token (antes ningún test lo protegía), rechazar dos veces → 409 e id inexistente → 404, reinicio del doble del runner en cada test. Aceptado: el test de AC4 por HTTP no puede fallar por un defecto del runner (eso lo cubren las herramientas).
+
+## T033 — 2026-11-12
+- status: complete
+- green: 1/1 contra el Postgres de desarrollo; integración 12/12; unit 469/469.
+- control: 2 mutantes (sesión no restaurada, id no real), ambos detectados.
+- decisiones: host propio `PostgresHost` (WebApplicationFactory) con el registro real y solo el modelo y los sistemas externos dobles; `DevDatabase.ConnectionStringValue` para configurarlo. El test crea y borra su usuario y sus filas de catálogo.
+- files: tests/WebApi.MinimalAPI.Tests/MafAgent/{Restart/MafAgentRestartTests.cs,Persistence/DevDatabase.cs,Http/MafAgentEndpointsTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T033.md)

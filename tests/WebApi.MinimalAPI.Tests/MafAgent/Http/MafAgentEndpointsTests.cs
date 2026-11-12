@@ -2,14 +2,21 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Common.Security;
+using Application.MafAgent.Command;
 using Application.MafAgent.Interfaces;
 using Application.MafAgent.Payloads;
+using Contracts.MafAgent;
 using Domain.Common.Exceptions;
 using Domain.Entities;
+using ErrorOr;
 using FluentAssertions;
+using MediatR;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using NSubstitute.ClearExtensions;
 using NSubstitute.ExceptionExtensions;
 
 namespace WebApi.MinimalAPI.Tests.MafAgent.Http;
@@ -30,6 +37,7 @@ public sealed class MafAgentEndpointsTests : IClassFixture<MafAgentApiFactory>
     {
         _factory = factory;
         _factory.Runner.ClearReceivedCalls();
+        _factory.Runner.ClearSubstitute(ClearOptions.ReturnValues);
         _factory.Runner.AppendSystemNoteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(c => c.ArgAt<string>(0) + " ");
         _encryption = _factory.Services.GetRequiredService<IEncryptionService>();
@@ -298,6 +306,57 @@ public sealed class MafAgentEndpointsTests : IClassFixture<MafAgentApiFactory>
         (await StatusOfAsync(foreign.Id)).Should().Be(PendingActionStatus.Pending);
     }
 
+    [Fact]
+    public async Task Reject_Twice_IsConflictAlreadyDecided_AndAnUnknownIdIsNotFound()
+    {
+        const long user = 3116;
+        PendingAction action = await SeedCreatePortfolioAsync(user);
+        HttpClient client = _factory.CreateClientForUser(user);
+
+        HttpResponseMessage first = await client.PostAsync($"{Base}/pending-actions/{action.Id}/reject", null, Token);
+        HttpResponseMessage second = await client.PostAsync($"{Base}/pending-actions/{action.Id}/reject", null, Token);
+        HttpResponseMessage unknown = await client.PostAsync($"{Base}/pending-actions/{Guid.NewGuid()}/reject", null, Token);
+
+        first.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ErrorCodeAsync(second)).Should().Be("MafAgent.PendingAction.AlreadyDecided");
+        unknown.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // Plan §0 "Tras el reclamo" 2: once claimed, a client disconnect must not cancel the write or the commit of its
+    // final state, so the endpoint sends the command WITHOUT the request's token.
+    [Fact]
+    public async Task Confirm_SendsTheCommandWithoutTheRequestCancellationToken()
+    {
+        const long user = 3117;
+        PendingAction action = await SeedCreatePortfolioAsync(user);
+        TokenProbe probe = new();
+        using WebApplicationFactory<Program> host = _factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddSingleton<IPipelineBehavior<ConfirmPendingActionCommand, ErrorOr<PendingActionResultDto>>>(probe)));
+        HttpClient client = host.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, user.ToString());
+
+        HttpResponseMessage response = await client.PostAsync($"{Base}/pending-actions/{action.Id}/confirm", null, Token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        probe.Seen.Should().BeTrue();
+        probe.Token.CanBeCanceled.Should().BeFalse("the request's token can be cancelled by a disconnect; CancellationToken.None cannot");
+    }
+
+    private sealed class TokenProbe : IPipelineBehavior<ConfirmPendingActionCommand, ErrorOr<PendingActionResultDto>>
+    {
+        public bool Seen { get; private set; }
+
+        public CancellationToken Token { get; private set; }
+
+        public Task<ErrorOr<PendingActionResultDto>> Handle(
+            ConfirmPendingActionCommand request, RequestHandlerDelegate<ErrorOr<PendingActionResultDto>> next, CancellationToken cancellationToken)
+        {
+            Seen = true;
+            Token = cancellationToken;
+            return next(cancellationToken);
+        }
+    }
     // ---- authentication ----
 
     [Theory]
