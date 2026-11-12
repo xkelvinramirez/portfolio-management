@@ -30,5 +30,10 @@
 	<ProjectReference Include="..\Application\Application.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <!-- WebApplicationFactory<Program> needs the top-level (internal) Program type. -->
+    <InternalsVisibleTo Include="WebApi.MinimalAPI.Tests" />
+  </ItemGroup>
+
 </Project>

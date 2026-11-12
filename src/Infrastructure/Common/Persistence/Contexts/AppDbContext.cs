@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PortfolioEntry> PortfolioEntries => Set<PortfolioEntry>();
     public DbSet<CryptoCurrency> CryptoCurrencies => Set<CryptoCurrency>();
     public DbSet<Exchange> Exchanges => Set<Exchange>();
+    public DbSet<MafConversation> MafConversations => Set<MafConversation>();
+    public DbSet<PendingAction> PendingActions => Set<PendingAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

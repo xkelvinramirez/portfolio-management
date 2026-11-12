@@ -17,7 +17,7 @@ namespace Infrastructure.Common.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -100,6 +100,106 @@ namespace Infrastructure.Common.Persistence.Migrations
                         .HasDatabaseName("ix_exchanges_name");
 
                     b.ToTable("Exchanges", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MafConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EncryptedSessionState")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encrypted_session_state");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_activity_at");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mafagent_conversations");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_mafagent_conversations_user_id");
+
+                    b.ToTable("mafagent_conversations", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.PendingAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("text")
+                        .HasColumnName("before_json");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("error_code");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("operation");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payload_json");
+
+                    b.Property<string>("ResultJson")
+                        .HasColumnType("text")
+                        .HasColumnName("result_json");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mafagent_pending_actions");
+
+                    b.HasIndex("ConversationId")
+                        .HasDatabaseName("ix_mafagent_pending_actions_conversation_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_mafagent_pending_actions_user_id");
+
+                    b.ToTable("mafagent_pending_actions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Portfolio", b =>
@@ -242,6 +342,26 @@ namespace Infrastructure.Common.Persistence.Migrations
                         .HasDatabaseName("ix_users_email");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MafConversation", b =>
+                {
+                    b.HasOne("Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mafagent_conversations_users_user_id");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PendingAction", b =>
+                {
+                    b.HasOne("Domain.Entities.MafConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mafagent_pending_actions_mafagent_conversations_conversatio");
                 });
 
             modelBuilder.Entity("Domain.Entities.Portfolio", b =>

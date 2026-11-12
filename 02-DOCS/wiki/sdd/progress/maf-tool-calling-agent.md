@@ -86,3 +86,169 @@ slug: maf-tool-calling-agent
 - red (esperado): T039 `CreateKernel_…` falló: "found one extraneous item at index 4: GetPortfolioAssetValueComparison". La red de seguridad detectó el cambio de base.
 - green: T039 actualizado a la nueva línea base (5 funciones; los datos de la comparación ya los fija `PortfolioAgentPluginTests`). Unit 165/165, integration exit 0, spike manual 3/3, format limpio.
 - **trigger de spec:** la decisión diferida "comparación entre fechas… hasta que esa feature llegue a development" ya se cumple. Pendiente de decidir (clarify) si AC1 vuelve a 5 preguntas y el agente MAF añade la herramienta de comparación. No afecta al PR1.
+
+## T003 + T004 — 2026-11-11
+- status: complete
+- red: `MafConversationTests` no compilaba (CS0246, tipo ausente).
+- green: 6/6. Mutación `>`→`>=` en IsExpired → falla el test de 24 h exactas.
+- contract (M6, aceptado; fijado aquí): `MafConversation.Create(long userId, string encryptedSessionState, DateTime nowUtc)`, `IsExpired(nowUtc)` (> 24 h), `Touch(nowUtc)`, `UpdateSession(string encrypted, DateTime nowUtc)`. Id = `Guid.CreateVersion7(nowUtc)`.
+- files: src/Domain/Entities/MafConversation.cs, tests/Domain.Tests/Entities/MafConversationTests.cs
+
+## T005 + T006 — 2026-11-11
+- status: complete
+- red: `PendingActionTests` no compilaba (CS0246).
+- green: 15/15. Mutación `>=`→`>` en IsExpired → falla el test de 10 min exactos.
+- decision: las transiciones inválidas lanzan `InvalidOperationException` (Domain no tiene ErrorOr; los handlers comprueban el estado antes, así que es un error de programación, no de negocio). MarkExecuting/MarkRejected solo desde Pending; MarkSucceeded/MarkFailed/MarkStale solo desde Executing.
+- files: src/Domain/Entities/PendingAction*.cs, tests/Domain.Tests/Entities/PendingActionTests.cs
+
+## T007 — 2026-11-11
+- status: complete
+- decision: `Values`/`Before` como `IReadOnlyDictionary<string, string?>` (mismo formato que el snapshot de ICurrentValuesReader); `Result` como `object?`.
+- files: src/Contracts/MafAgent/*.cs
+
+## T008 — 2026-11-11
+- status: complete
+- check: refs prohibidas en Application con controles positivo y negativo; puertos públicos; InternalsVisibleTo.
+- files: src/Application/MafAgent/Interfaces/*.cs, src/Application/Application.csproj
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T003-T008.md); unit 186/186.
+- per-task review: pendiente (agrupada T003–T008).
+
+## T003–T008 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 4 minor).
+- minor (diferidos a la revisión final): (1) `UpdateSession` va más allá del plan, pero está testeado y registrado como contrato M6; (2) `InternalsVisibleTo` de Infrastructure → lo cubre T009; (3) `Guid.CreateVersion7(nowUtc)` reinterpreta fechas con Kind distinto de Utc (§0 ya lo prohíbe; documentar o asertar); (4) `MarkFailed` no protege contra un errorCode vacío.
+
+## Ramas — 2026-11-11
+- PR2 movido a `feature/maf-tool-calling-agent-pr2` (apilada sobre el PR1). Un push ajeno (18:44, probablemente el IDE) había publicado T003–T008 en `origin/feature/maf-tool-calling-agent`. El force-push para devolver el PR1 a `ec54b8a` lo bloquea el hook `pre-bash-guard` de dotnet-claude-kit: **pendiente de que el usuario lo ejecute**. `feature/maf-tool-calling-agent-pr2` publicada.
+
+## T009 — 2026-11-11
+- status: complete
+- files: src/Infrastructure/MafAgent/Persistence/{MafConversationConfiguration,PendingActionConfiguration,MafConversationRepository,PendingActionRepository}.cs, AppDbContext (DbSets), DependencyInjection (repos), Infrastructure.csproj (InternalsVisibleTo)
+- decision: enums como texto (auditoría legible; un cambio de orden del enum no reasigna filas). Repos directos sobre AppDbContext, porque `Repository<T>` exige `Entity` con id long.
+
+## T010 — 2026-11-11
+- status: complete
+- migration: 20261111175145_AddMafAgent (2 tablas + 3 índices, solo aditiva). Aplicada al Supabase de desarrollo (confirmado por el usuario).
+
+## T011 — 2026-11-11
+- status: complete
+- red: 9/9 con `NotImplementedException: T012` (con la siembra contra la base funcionando).
+- harness (M8, aceptado; fijado aquí): cadena desde la variable de entorno `ConnectionStrings__Database` o los user-secrets de WebApi (`daa01fcc-…`); un usuario temporal por test, borrado en `DisposeAsync`; concurrencia con dos `AppDbContext` independientes.
+
+## T012 — 2026-11-11
+- status: complete
+- green: 9/9 integración; `ExecuteUpdate` = 3; `TrackedChangesDiscarder` (`ChangeTracker.Clear()`) + tests 2/2 (EF InMemory añadido al proyecto de tests).
+- mutantes: sin `Status==Pending` → 4 fallos (incl. concurrencia); sin `ExpiresAt>now` → 2 fallos.
+- suite: unit 188/188, integración 9/9.
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T009-T012.md)
+
+## T009–T012 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 5 minor).
+- minor (corregido): falta el borde exacto de caducidad en el claim → `TryClaim_AtTheExactTenMinuteMark_ReturnsFalse`; el mutante `ExpiresAt > now` → `>=` ahora falla. Integración 10/10.
+- minor (corregido): barrido de usuarios `maf-it-*@test.local` residuales en `InitializeAsync` (por si se mata el proceso a mitad de test).
+- minor (diferidos): (1) sin cadena de conexión, los tests INTEG fallan en vez de saltarse; se ejecutan con el filtro `Category=Integration` de config.yaml y el `UNIT` los excluye; (2) "no Pending" en Reject solo prueba Executing (el mutante de estado ya muere); (3) `ExecuteUpdate` deja obsoleta una entidad ya cargada en el tracker: por diseño, T019/T020 deben mantener el orden MarkExecuting/DiscardAll.
+
+## Ramas — force-push del PR1 — 2026-11-11
+- El usuario ejecutó el force-push: `origin/feature/maf-tool-calling-agent` = `ec54b8a` (solo el PR1). La rama local del PR1 está abierta en la carpeta principal y sigue en `c3e4c05`; hay que alinearla allí (`git reset --keep origin/feature/maf-tool-calling-agent`) para que un "Sync" del IDE no vuelva a subir T003–T008.
+
+## T037 + T038 — 2026-11-11
+- status: complete
+- red: tests no compilaban (CS0246, `AddedEntityIdLog` ausente).
+- green: 5/5 InMemory + 1/1 Postgres; unit 193/193; integración 11/11.
+- **hallazgo de test:** el mutante "registrar ids antes del commit" sobrevivía con InMemory (asigna ids en `Add`). Se añadió `AddedEntityIdLogIntegrationTests` (Postgres: `Id == 0` antes de guardar), que lo mata ("Expected 5L, but found 0L"). Desviación del done-check de T037: se añade una capa de integración.
+- refactor: helper `DevDatabase` (cadena, usuario de test, barrido) y colección xUnit `DevDatabase` sin paralelismo, para que el barrido de una clase no borre usuarios vivos de otra.
+- files: src/Infrastructure/MafAgent/Persistence/AddedEntityIdLog.cs, src/Infrastructure/DependencyInjection.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Persistence/{AddedEntityIdLogTests,AddedEntityIdLogIntegrationTests,DevDatabase}.cs, PendingActionRepositoryClaimTests.cs (usa el helper)
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T037-T038.md)
+
+## T037–T038 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 5 minor). DI y ciclo de vida correctos: la misma instancia scoped en el contexto y en `IAddedEntityIdLog`, sin dependencia cautiva.
+- minor (diferidos): (1) reintentos de `EnableRetryOnFailure`: según el diseño de EF el reintento ocurre dentro de la estrategia, tras `SavingChanges`, y `SaveChangesFailed` solo salta al fallo final, así que la lista pendiente sobrevive. NO verificado en el código fuente de EF; riesgo bajo. (2) cableado DI no probado aquí: T033 (ServiceProvider real) debe afirmar id > 0 e igual al de la fila. (3) solo la ruta async contra Postgres. (4) otro proceso de tests concurrente sobre la base compartida (aceptado). (5) línea en blanco extra en PendingActionRepositoryClaimTests.
+- PR2 pendiente: solo T002 (infraestructura de tests HTTP).
+
+## T002 — 2026-11-11
+- status: complete
+- red/green: smoke 4/4 a la primera; verificado con mutantes (repositorio real → 2 fallos; sin doble de Cosmos → 4 fallos).
+- harness: `MafAgentApiFactory` (Testing, settings en memoria, EF InMemory + AddedEntityIdLog, doble de transiciones, dobles de Cosmos/runner/email/CoinGecko, FakeTimeProvider, auth por cabecera `X-Test-UserId`). Retira solo el hosted service de HealthChecks UI.
+- decision: `InternalsVisibleTo(WebApi.MinimalAPI.Tests)` en WebApi.csproj en lugar de `public partial class Program` (sin tocar código).
+- finding (fuera de alcance): HealthChecks.UI no carga IdentityModel 5.2 en la salida de tests; revisar en la API desplegada.
+- suite: unit 197/197, integration 11/11.
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T002.md)
+- **PR2 completo:** T002–T012, T037, T038.
+
+## T002 — revisión por tarea — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 0 important, 4 minor). El `InternalsVisibleTo` de WebApi no contradice "sin tocar código", pero es una excepción a M1 a nivel de proyecto (registrada aquí).
+- **pautas obligatorias para T031** (minor 2): `Runner`, `Time` y la base InMemory se comparten dentro de un `IClassFixture`. Cada test usa ids de usuario propios y `Runner.ClearReceivedCalls()` (o una factoría por test) para que las aserciones de AC4 (`DidNotReceive`) y los `Returns` no se contaminen; no avanzar `Time` sin restaurarlo.
+- minor (diferidos): (1) no está verificado que `UseSetting` gane a las variables de entorno (ApplicationInsights/Serilog); fijarlo con `ConfigureAppConfiguration` o un guard si aparece; (3) el doble de transiciones solo prueba claim y mark-failed (reject y borde de caducidad cubiertos contra Postgres en T011); InMemory ignora FK y unique; (4) la aserción `Contains("Proxy")` depende del nombre de Castle.
+
+## Ramas — PR3 — 2026-11-11
+- Rama `feature/maf-tool-calling-agent-pr3` creada desde `origin/feature/maf-tool-calling-agent-pr2` (f0f07c5), sin upstream, para que un push automático del IDE no acabe en el PR2.
+
+## T013–T016 — 2026-11-11
+- status: complete
+- red: T013 no compilaba (CS0234/CS0246: `Payloads`, `PendingActionFactory`); T015 igual (`CurrentValuesReader`).
+- green: factoría 37/37; desfase y lector 19/19; unit 253/253; integración 11/11.
+- mutantes: 6, todos detectados (ver el registro de verificación).
+- **decisión (hueco del plan):** payloads tipados propios en `Application/MafAgent/Payloads` (id objetivo con `[PayloadTarget]` y todos los campos de la petición completa), porque `Update*Request` no lleva el id que necesita el comando. `Before` es el `FieldSnapshot` del lector. `BusinessTime` centraliza `Europe/Madrid` y los dos formatos de presentación.
+- files: src/Application/MafAgent/{PendingActionFactory,FieldSnapshot,BusinessTime,StaleCheck,CurrentValuesReader}.cs, src/Application/MafAgent/Payloads/PendingActionPayloads.cs, tests/Application.Tests/MafAgent/{PendingActionFactoryTests,StaleCheckTests,CurrentValuesReaderTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T013-T016.md)
+
+## T013–T016 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 2 important, 5 minor).
+- important #1 descartado con evidencia: "G29" ya normaliza la escala de los decimales (ver la verificación de T017–T018).
+- important #2 corregido: `FieldSnapshotTests` (Kind Utc/Unspecified/Local/DateTimeOffset).
+- minor corregidos: #3 (comentario en StaleCheck), #4 (test del título con forma de fecha).
+- **pauta para T019/T023 (minor 5):** `ReadPayload`/`ReadBefore`/`ToDto` lanzan con datos corruptos o que no se descifran. En confirm, la lectura tras el reclamo queda dentro del `catch` documentado (→ Failed). Antes del reclamo y en chat, una excepción ahí es un fallo de servidor (500), no de negocio.
+- minor diferidos: #6 `BusinessTime.Zone` sin tzdata (igual que los handlers actuales); #7 visibilidad interna de helpers (sin impacto).
+
+## T017–T018 — 2026-11-11
+- status: complete
+- red: CS0246 (`PendingActionExecutor` ausente). green: 11/11; unit 272/272; integración 11/11.
+- mutantes: 5, todos detectados.
+- decision: el ejecutor no reenvía su `ct` y despacha siempre con `CancellationToken.None` (más fuerte que "quien lo llama pasa None"). `StatusReportSentResult` es el resultado de un informe enviado.
+- files: src/Application/MafAgent/PendingActionExecutor.cs, StaleCheck.cs (comentario), tests/Application.Tests/MafAgent/{PendingActionExecutorTests,FieldSnapshotTests,PendingActionFactoryTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T017-T018.md)
+
+## T019–T020 — 2026-11-11
+- status: complete
+- red: CS0234/CS0246 (handler ausente). green: 19/19; unit 291/291; integración 11/11.
+- mutantes: 8; 7 detectados y 1 equivalente (comprobación doble de dueño).
+- decisiones: `MafAgentErrors` con los códigos exactos de plan §0. Orden previo al reclamo: dueño → caducidad (acción o conversación) → estado. Tras el reclamo: leer el payload, comprobar el desfase y ejecutar, todo dentro del único `catch (Exception)` documentado; así un payload corrupto acaba en `Failed` (pauta de la revisión de T013–T016). La nota de sesión se añade FUERA del `catch`: si fallara, sería un 500 y la acción quedaría en `Executing` (nunca se re-ejecuta, "como mucho una vez").
+- files: src/Application/MafAgent/{MafAgentErrors.cs,Command/ConfirmPendingActionCommandHandler.cs,Command/ConfirmPendingActionCommandValidator.cs}, tests/Application.Tests/MafAgent/{ConfirmPendingActionCommandHandlerTests,ListLogger}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T019-T020.md)
+
+## T017–T020 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT fail (1 important, 2 minor, 5 mutantes supervivientes). Ejecutor y respuestas a las preguntas de runtime: correctos (el SaveChanges interno escribe `Executing` sobre una fila ya en `Executing`, inocuo; tras `DiscardAll` la UoW no guarda nada).
+- important #1 corregido: la nota de sesión dentro del mismo `try`; si falla con el desenlace decidido, se devuelve y persiste el desenlace real sin nota. Sigue habiendo una única captura de `Exception` (dos ramas). Mi decisión anterior (nota fuera de la captura, 500 aceptado) era incorrecta: el plan solo acepta `Executing` permanente ante una caída del proceso.
+- minor #2 corregido: aviso si `TryMarkFailedAsync` devuelve false. minor #3 → pauta para T031 (el endpoint confirm sin token).
+- mutantes supervivientes: los 5 cubiertos con tests nuevos (unit 296/296).
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T020-review.md)
+
+## T021–T022 — 2026-11-12
+- status: complete
+- red: CS0246 (comando, handler y validador ausentes). green: 15/15; unit 311/311; integración 11/11.
+- mutantes: 8, todos detectados (el de dueño de la acción, tras añadir un test de acción ajena en conversación propia).
+- decisiones: `RejectPendingActionCommand : IRequest<ErrorOr<Success>>` (el endpoint devolverá 204). **No es `ICommand`**: `TryRejectAsync` hace su propio commit y no queda nada para la UoW; la entidad cargada nunca se modifica, así la UoW no puede pisar un confirm concurrente. Mismo orden de comprobaciones que confirmar. Rechazar **no añade nota a la sesión**: ni el spec ni el plan la piden, y si el usuario pregunta, el agente puede consultar el estado. Se puede revisar en T023/T028 si hace falta.
+- files: src/Application/MafAgent/Command/{RejectPendingActionCommandHandler,RejectPendingActionCommandValidator}.cs, tests/Application.Tests/MafAgent/RejectPendingActionCommandHandlerTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T021-T022.md)
+## T021–T022 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado sin defecto: paridad del WHERE de `TryRejectAsync` con el handler (`now >= ExpiresAt` frente a `ExpiresAt > now`), nada pasa por la UoW ni por la caché, y el validador se registra.
+- minor #1 corregido: el mutante que quita la comprobación de dueño de la conversación sobrevivía; test nuevo (acción propia en conversación ajena) lo detecta. unit 312/312.
+- minor #2 aceptado: la caducidad de la conversación por inactividad no está en el SQL atómico; un rechazo que cruza el límite de 24 h a la vez sigue siendo inocuo (no escribe datos de negocio). Confirmar tiene la misma forma.
+## T023–T024 — 2026-11-12
+- status: complete
+- red: CS0246 (handler ausente). green: 24/24 (20 handler + 4 DI); unit 336/336; integración 11/11.
+- mutantes: 13, todos detectados.
+- decisiones: conversación nueva → el runner recibe sesión vacía `""` (el runner de T030 debe tratarla como sesión nueva) y la conversación se prepara con `Add` solo tras un turno correcto. Sesión corrupta → excepción (500), nada se guarda. El handler no tiene ejecutor ni `ISender`: no puede escribir. El chat sí usa el token de la petición (no escribe nada hasta el commit). `Application.Tests` añade `Microsoft.Extensions.DependencyInjection` 10.0.14 (la versión de `Microsoft.Extensions.Hosting` en Infrastructure) para el test de DI; MediatR exige `ILoggerFactory` registrado antes de `AddApplication`, como hace el host.
+- files: src/Application/{DependencyInjection.cs,MafAgent/Command/SendMafAgentMessageCommandHandler.cs,MafAgent/Command/SendMafAgentMessageCommandValidator.cs}, tests/Application.Tests/{Application.Tests.csproj,MafAgent/SendMafAgentMessageCommandHandlerTests.cs,MafAgent/MafAgentApplicationDiTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T023-T024.md)
+## T023–T024 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Descartado con evidencia: un turno fallido no guarda nada (`UnitOfWorkBehavior` solo guarda sin error; el `DbContext` es por petición); EF ordena las inserciones por FK aunque la conversación se añada después de las acciones; `Encrypt("")` ida y vuelta correcto; el host registra logging antes de `AddApplication`.
+- minor corregido: el mutante "texto del mensaje en el log de timeout" sobrevivía (el de límite de pasos ya lo detectaba); el test de timeout ahora lo comprueba. unit 336/336.
+- minor aceptados: dos turnos simultáneos en una conversación → gana el último en la sesión (ya aceptado en plan §6, M7, token `xmin` como mitigación futura); la propiedad "nada se guarda tras un fallo" de punta a punta la cubren T031/T033.

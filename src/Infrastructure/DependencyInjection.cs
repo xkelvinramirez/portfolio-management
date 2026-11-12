@@ -16,6 +16,8 @@ using Infrastructure.PortfolioEntries;
 using Infrastructure.Notes;
 using Infrastructure.Reports;
 using Infrastructure.Agent;
+using Application.MafAgent.Interfaces;
+using Infrastructure.MafAgent.Persistence;
 using Infrastructure.Agent.Filters;
 using Infrastructure.Agent.Plugins;
 using Infrastructure.Resilience;
@@ -136,12 +138,19 @@ public static class DependencyInjection
     private static IServiceCollection AddDbContexts(this IServiceCollection services, IConfiguration configuration)
     {
         string? connectionString = configuration.GetConnectionString("Database");
+
+        // One AddedEntityIdLog per request: it records the real ids of inserted entities after commit,
+        // because create handlers build their response while the identity id is still 0.
+        services.AddScoped<AddedEntityIdLog>();
+        services.AddScoped<IAddedEntityIdLog>(sp => sp.GetRequiredService<AddedEntityIdLog>());
+
         services.AddDbContext<AppDbContext>(
-            options => options
+            (sp, options) => options
                 .UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions
                     .MigrationsHistoryTable(HistoryRepository.DefaultTableName, Schemas.Default)
                     .EnableRetryOnFailure())
-                .UseSnakeCaseNamingConvention());
+                .UseSnakeCaseNamingConvention()
+                .AddInterceptors(sp.GetRequiredService<AddedEntityIdLog>()));
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         return services;
     }
@@ -153,6 +162,9 @@ public static class DependencyInjection
         services.AddScoped<IExchangeRepository, ExchangeRepository>();
         services.AddScoped<ICryptoCurrencyRepository, CryptoCurrencyRepository>();
         services.AddScoped<IPortfolioEntryRepository, PortfolioEntryRepository>();
+        services.AddScoped<IMafConversationRepository, MafConversationRepository>();
+        services.AddScoped<IPendingActionRepository, PendingActionRepository>();
+        services.AddScoped<ITrackedChangesDiscarder, TrackedChangesDiscarder>();
 
         return services;
     }
