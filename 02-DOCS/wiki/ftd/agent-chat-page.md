@@ -1,7 +1,7 @@
 ---
 author: kramirez
-branch: agent-chat-page
-status: in-progress
+branch: agent-chat-page (fusionada en development con el PR #16; rama y worktree retirados el 2026-11-12)
+status: merged — prueba E2E 2026-11-12: el frontend cumple, la conversación falla por el agente SK (ver Evidence)
 ---
 # Página de chat con el agente
 
@@ -60,12 +60,40 @@ respuestas pueden tardar bastante (Ollama local en CPU, `RequestTimeoutSeconds=2
 - `npm run dev` + `curl http://localhost:3000/agent`: `HTTP 200`, el HTML devuelto contiene
   "Cargando" (el `LoadingScreen` de `AuthGuard` sin token) y ningún error de hidratación/excepción
   en el log del servidor.
-- Pendiente para quien continúe: probar la conversación real contra el backend con Ollama local
-  levantado (`docker compose up -d` + login), y confirmar visualmente las burbujas, el recorte de
-  historial largo, y el estado de error ante un timeout real del agente.
+### Prueba E2E con modelo real — 2026-11-12
+
+Contra la API real (`development`, Postgres de desarrollo) con Ollama `qwen2.5:7b-instruct`. Un usuario
+desechable con el portafolio "Principal" (1 BTC a 40.000 y 5 ETH a 2.000). Cada mensaje se armó con la misma
+lógica que `buildOutgoingMessage` (presupuesto de 1800 caracteres, turnos recientes primero) y se envió a
+`POST /api/v1/Agent/chat`, como hace la página. Al final se borraron los usuarios de prueba (en cascada).
+
+| Caso | Enviado | Resultado |
+| --- | --- | --- |
+| 1. "¿Cuánto vale ahora mismo mi portafolio Principal?" | 49 caracteres | HTTP 200 en 65 s, `reply` **vacío** |
+| 2. Seguimiento con historial | 152 caracteres | HTTP 200 en 10 s, `reply` **vacío** |
+| 3. Historial largo (24 turnos) | 1759 caracteres: el recorte funciona y no pasa de 2000 | HTTP 200 en 75 s, `reply` **vacío** |
+| 4. Timeout (`Ai__RequestTimeoutSeconds=2`) | 49 caracteres | HTTP 400 `Agent.Timeout` en 5 s; la página mostraría su `description` |
+
+- **Frontend: cumple.** El recorte respeta el límite, la petición tiene el contrato correcto y
+  `getApiErrorMessage` extrae la `description` del timeout.
+- **Conversación: falla, por el backend.** El agente SK nunca llama a `ListMyPortfolios`. Se inventa
+  `portfolioId=1`, recibe `null` y repite `GetPortfolioValue`/`GetPortfolioHoldings` hasta que
+  `LoopCappingFilter` corta, en los tres casos. La API devuelve 200 con `reply` vacío, y la página pinta una
+  burbuja del agente vacía. Es el mismo fallo que tuvo el agente MAF antes de su refuerzo (ids en el contexto
+  del turno). El agente MAF ya lo resuelve.
+- **Detalles menores de la página:**
+  - una respuesta vacía no se trata como error;
+  - el texto del timeout llega en inglés ("Agent execution halted: …").
+- **Hallazgo aparte:** `POST /api/v1/Portfolio` devuelve `id: 0`. La respuesta se arma antes de que
+  `UnitOfWorkBehavior` guarde.
+- No verificado: la apariencia visual de las burbujas, porque esta sesión no tiene navegador.
 
 ## Next
 
-Hecho el checklist (ver pendiente de verificación manual arriba). Falta: `dotnet build`/`dotnet test`
-del backend no aplica (sin cambios ahí); revisar el diff completo y decidir si se abre PR desde la
-rama `agent-chat-page` hacia `development`.
+La página está fusionada y cumple su alcance. Para que la conversación funcione hay que decidir:
+1. Apuntar `/agent` al agente MAF (`/api/v1/MafAgent/chat`, que guarda la conversación en el servidor y
+   propone acciones).
+2. O reforzar el agente SK como se hizo con MAF. Esto toca `*/Agent/` y necesita tu aprobación.
+
+Mejoras pequeñas de la página, independientes de lo anterior: tratar un `reply` vacío como error y traducir
+`Agent.Timeout`.
