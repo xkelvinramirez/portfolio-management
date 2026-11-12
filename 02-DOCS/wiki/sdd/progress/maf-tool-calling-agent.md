@@ -227,3 +227,11 @@ slug: maf-tool-calling-agent
 - minor #2 corregido: aviso si `TryMarkFailedAsync` devuelve false. minor #3 → pauta para T031 (el endpoint confirm sin token).
 - mutantes supervivientes: los 5 cubiertos con tests nuevos (unit 296/296).
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T020-review.md)
+
+## T021–T022 — 2026-11-12
+- status: complete
+- red: CS0246 (comando, handler y validador ausentes). green: 15/15; unit 311/311; integración 11/11.
+- mutantes: 8, todos detectados (el de dueño de la acción, tras añadir un test de acción ajena en conversación propia).
+- decisiones: `RejectPendingActionCommand : IRequest<ErrorOr<Success>>` (el endpoint devolverá 204). **No es `ICommand`**: `TryRejectAsync` hace su propio commit y no queda nada para la UoW; la entidad cargada nunca se modifica, así la UoW no puede pisar un confirm concurrente. Mismo orden de comprobaciones que confirmar. Rechazar **no añade nota a la sesión**: ni el spec ni el plan la piden, y si el usuario pregunta, el agente puede consultar el estado. Se puede revisar en T023/T028 si hace falta.
+- files: src/Application/MafAgent/Command/{RejectPendingActionCommandHandler,RejectPendingActionCommandValidator}.cs, tests/Application.Tests/MafAgent/RejectPendingActionCommandHandlerTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T021-T022.md)
