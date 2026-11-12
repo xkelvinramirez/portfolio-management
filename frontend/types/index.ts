@@ -263,3 +263,53 @@ export interface SendAgentMessageRequest {
 export interface SendAgentMessageResponse {
   reply: string;
 }
+
+// ---------- MAF agent ----------
+// Mirrors src/Contracts/MafAgent/*.cs.
+
+export type PendingActionOperation =
+  | "CreatePortfolio"
+  | "UpdatePortfolio"
+  | "CreateEntry"
+  | "UpdateEntry"
+  | "CreateNote"
+  | "UpdateNote"
+  | "RefreshPrices"
+  | "SendStatusReport";
+
+// A write the agent proposed. Nothing runs until the user confirms `id`.
+// `values` is the exact request that will be applied (dates as ISO-8601 UTC with Z);
+// `before` is the current state for edits, null for creates and system actions.
+export interface PendingAction {
+  id: string;
+  operation: PendingActionOperation;
+  summary: string;
+  values: Record<string, string | null>;
+  before: Record<string, string | null> | null;
+  expiresAt: string;
+}
+
+export interface SendMafAgentMessageRequest {
+  // null starts a new conversation.
+  conversationId: string | null;
+  message: string;
+  // The portfolio the user is looking at; the agent uses it unless the user names another.
+  portfolioId: number | null;
+}
+
+export interface SendMafAgentMessageResponse {
+  conversationId: string;
+  reply: string;
+  // Only the actions proposed during this turn.
+  pendingActions: PendingAction[];
+}
+
+export type PendingActionResultStatus = "Succeeded" | "Failed" | "Stale";
+
+export interface PendingActionResult {
+  id: string;
+  operation: PendingActionOperation;
+  status: PendingActionResultStatus;
+  result: unknown;
+  error: { code: string; description: string } | null;
+}

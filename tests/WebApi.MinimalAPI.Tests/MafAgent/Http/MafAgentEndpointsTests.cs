@@ -104,7 +104,7 @@ public sealed class MafAgentEndpointsTests : IClassFixture<MafAgentApiFactory>
     }
 
     private void RunnerAnswers(string reply, Func<MafConversation, IReadOnlyList<PendingAction>>? proposed = null) =>
-        _factory.Runner.RunTurnAsync(Arg.Any<MafConversation>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _factory.Runner.RunTurnAsync(Arg.Any<MafConversation>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ActivePortfolio?>(), Arg.Any<CancellationToken>())
             .Returns(c => Task.FromResult(new MafAgentTurnResult(reply, "{}", proposed?.Invoke(c.ArgAt<MafConversation>(0)) ?? [])));
 
     // ---- chat ----
@@ -163,7 +163,7 @@ public sealed class MafAgentEndpointsTests : IClassFixture<MafAgentApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await ErrorCodeAsync(response)).Should().Be("MafAgent.Conversation.NotFound");
-        await _factory.Runner.DidNotReceiveWithAnyArgs().RunTurnAsync(default!, default!, default!, Token);
+        await _factory.Runner.DidNotReceiveWithAnyArgs().RunTurnAsync(default!, default!, default!, default, Token);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class MafAgentEndpointsTests : IClassFixture<MafAgentApiFactory>
     public async Task Chat_WhenTheAgentExceedsItsSteps_IsBadRequestLoopExhausted_AndNothingIsSaved()
     {
         const long user = 3107;
-        _factory.Runner.RunTurnAsync(Arg.Any<MafConversation>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _factory.Runner.RunTurnAsync(Arg.Any<MafConversation>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ActivePortfolio?>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new AgentLoopExhaustedException(5));
 
         HttpResponseMessage response = await _factory.CreateClientForUser(user)

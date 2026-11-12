@@ -24,6 +24,10 @@ public static class MafAgentErrors
     public static Error PendingActionAlreadyDecided(Guid id) =>
         Error.Conflict("MafAgent.PendingAction.AlreadyDecided", $"Pending action '{id}' was already confirmed or rejected.");
 
+    // Also for another user's portfolio: the same answer as an unknown id.
+    public static Error PortfolioNotFound(long id) =>
+        Error.NotFound("MafAgent.Portfolio.NotFound", $"Portfolio '{id}' was not found.");
+
     public static Error LoopExhausted() =>
         Error.Failure("MafAgent.LoopExhausted", "The agent exceeded its step limit. Try a simpler request.");
 

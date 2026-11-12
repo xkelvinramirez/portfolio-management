@@ -35,6 +35,7 @@ public class MafAgentApplicationDiTests
         services.AddScoped(_ => Substitute.For<IMafConversationRepository>());
         services.AddScoped(_ => Substitute.For<ITrackedChangesDiscarder>());
         services.AddScoped(_ => Substitute.For<IMafAgentRunner>());
+        services.AddScoped(_ => Substitute.For<Application.Portfolios.Interfaces.IPortfolioRepository>());
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = false });
     }
 

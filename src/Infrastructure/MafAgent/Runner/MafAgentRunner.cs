@@ -51,7 +51,8 @@ internal sealed class MafAgentRunner(
         "exchanges is not supported in this version. Say so in one sentence and stop: propose nothing, and never " +
         "offer a confirmation phrase, a workaround or a deletion.\n" +
         "3. IDS: never guess an id. Portfolio ids are listed in the context of each turn (or call ListMyPortfolios); " +
-        "use the id whose name matches what the user said. Entry ids come from GetPortfolioEntries, note ids from " +
+        "use the id whose name matches what the user said; if the user names no portfolio, use the one the context " +
+        "says the user is looking at. Entry ids come from GetPortfolioEntries, note ids from " +
         "ListNotes.\n" +
         "4. MISSING DATA: never fill in a value the user did not give (quantity, price, asset symbol, exchange, date, " +
         "name, title, content). Call the Propose* tool with only what the user gave; when it returns " +
@@ -68,12 +69,16 @@ internal sealed class MafAgentRunner(
     // model several conflicting "current" times (and grow the session on every turn).
     internal const string TimeContextMarker = "Context for this turn:";
 
+    // Precedes the portfolio the user is looking at in the turn context.
+    internal const string ActivePortfolioMarker = "The user is looking at portfolio";
+
     private int _toolCalls;
     private bool _loopExhausted;
     private Guid _conversationId;
 
     public async Task<MafAgentTurnResult> RunTurnAsync(
-        MafConversation conversation, string decryptedSessionJson, string message, CancellationToken ct)
+        MafConversation conversation, string decryptedSessionJson, string message, ActivePortfolio? activePortfolio,
+        CancellationToken ct)
     {
         _toolCalls = 0;
         _loopExhausted = false;
@@ -87,7 +92,7 @@ internal sealed class MafAgentRunner(
         AgentResponse response;
         try
         {
-            ChatMessage context = await TurnContextAsync(ct);
+            ChatMessage context = await TurnContextAsync(activePortfolio, ct);
             response = await agent.RunAsync([context, new ChatMessage(ChatRole.User, message)], session, cancellationToken: ct);
         }
         catch (Exception exception) when (IsInferenceTimeout(exception, ct))
@@ -145,8 +150,9 @@ internal sealed class MafAgentRunner(
         return await agent.DeserializeSessionAsync(document.RootElement.Clone(), cancellationToken: ct);
     }
 
-    // The time of the turn (AC19) and the user's own portfolios with their ids, so the model never has to guess an id.
-    private async Task<ChatMessage> TurnContextAsync(CancellationToken ct)
+    // The time of the turn (AC19), the user's own portfolios with their ids, so the model never has to guess an id, and
+    // the portfolio the user is looking at, so a question that names none is not answered about another one.
+    private async Task<ChatMessage> TurnContextAsync(ActivePortfolio? activePortfolio, CancellationToken ct)
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         object listed = await readTools.ListMyPortfolios(ct);
@@ -158,7 +164,11 @@ internal sealed class MafAgentRunner(
         return new ChatMessage(ChatRole.System,
             $"{TimeContextMarker} current time {BusinessTime.FormatUtc(utcNow)} (UTC); " +
             $"local business time {BusinessTime.FormatLocal(utcNow)}; business time zone id {BusinessTime.ZoneId}. " +
-            $"The user's portfolios: {portfolioList}.");
+            $"The user's portfolios: {portfolioList}." +
+            (activePortfolio is null
+                ? ""
+                : $" {ActivePortfolioMarker} id {activePortfolio.Id} = \"{activePortfolio.Name}\". When the user does not " +
+                  "name a portfolio, the question and any proposal are about this one."));
     }
 
     private async ValueTask<object?> CountAndLogToolCallAsync(

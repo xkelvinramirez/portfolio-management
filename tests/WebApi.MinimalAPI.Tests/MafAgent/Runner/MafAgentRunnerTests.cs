@@ -83,7 +83,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = AnswersWith("hola");
 
-        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         List<string> tools = model.Calls[0].Options!.Tools!.Select(t => t.Name).ToList();
         tools.Should().HaveCount(20);
@@ -97,7 +97,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = AnswersWith("hola");
 
-        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         string instructions = model.Calls[0].Options!.Instructions!;
         instructions.Should().Contain("language of the user's LAST message", "rule 1: answer in the language of the user's last message");
@@ -111,7 +111,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = AnswersWith("hola");
 
-        await Runner(model).RunTurnAsync(_conversation, "", "¿qué pasó ayer?", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "¿qué pasó ayer?", null, Token);
 
         // 23:30 UTC on the 10th is already the 11th in Madrid.
         string sent = string.Join("\n", model.Calls[0].Messages.Select(m => m.Text));
@@ -129,10 +129,32 @@ public sealed class MafAgentRunnerTests
         PortfoliosAre([main]);
         ScriptedChatClient model = AnswersWith("hola");
 
-        await Runner(model).RunTurnAsync(_conversation, "", "¿cuánto vale Principal?", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "¿cuánto vale Principal?", null, Token);
 
         string context = model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text;
         context.Should().Contain("id 41 = \"Principal\"");
+    }
+
+    [Fact]
+    public async Task TheActivePortfolio_IsNamedInTheContext_AsTheDefaultForTheTurn()
+    {
+        ScriptedChatClient model = AnswersWith("hola");
+
+        await Runner(model).RunTurnAsync(_conversation, "", "¿cuánto vale?", new ActivePortfolio(41L, "Principal"), Token);
+
+        string context = model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text;
+        context.Should().Contain($"{MafAgentRunner.ActivePortfolioMarker} id 41 = \"Principal\"");
+    }
+
+    [Fact]
+    public async Task WithoutAnActivePortfolio_TheContextNamesNone()
+    {
+        ScriptedChatClient model = AnswersWith("hola");
+
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
+
+        model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text
+            .Should().NotContain(MafAgentRunner.ActivePortfolioMarker);
     }
 
     [Fact]
@@ -140,7 +162,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = AnswersWith("hola");
 
-        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         model.Calls[0].Messages.Single(m => m.Text.StartsWith(MafAgentRunner.TimeContextMarker)).Text
             .Should().Contain("the user has no portfolios yet");
@@ -148,7 +170,7 @@ public sealed class MafAgentRunnerTests
     [Fact]
     public async Task TheReply_IsTheModelsFinalText()
     {
-        MafAgentTurnResult result = await Runner(AnswersWith("Tienes 2 portafolios.")).RunTurnAsync(_conversation, "", "hola", Token);
+        MafAgentTurnResult result = await Runner(AnswersWith("Tienes 2 portafolios.")).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         result.Reply.Should().Be("Tienes 2 portafolios.");
     }
@@ -158,12 +180,12 @@ public sealed class MafAgentRunnerTests
     [Fact]
     public async Task TheSerializedSession_IsRestoredWithItsPreviousTurns_ByANewRunner()
     {
-        MafAgentTurnResult first = await Runner(AnswersWith("Primera respuesta")).RunTurnAsync(_conversation, "", "Primera pregunta", Token);
+        MafAgentTurnResult first = await Runner(AnswersWith("Primera respuesta")).RunTurnAsync(_conversation, "", "Primera pregunta", null, Token);
         first.SerializedSessionJson.Should().Contain("Primera pregunta");
 
         // A brand-new runner, as after an API restart, continues from the JSON only.
         ScriptedChatClient model = AnswersWith("Segunda respuesta");
-        await Runner(model).RunTurnAsync(_conversation, first.SerializedSessionJson, "Segunda pregunta", Token);
+        await Runner(model).RunTurnAsync(_conversation, first.SerializedSessionJson, "Segunda pregunta", null, Token);
 
         List<string> seen = model.Calls[0].Messages.Select(m => m.Text).ToList();
         seen.Should().Contain("Primera pregunta").And.Contain("Primera respuesta").And.Contain("Segunda pregunta");
@@ -172,14 +194,14 @@ public sealed class MafAgentRunnerTests
     [Fact]
     public async Task AppendSystemNote_AddsTheNoteToTheHistory_WithoutCallingTheModel()
     {
-        MafAgentTurnResult first = await Runner(AnswersWith("ok")).RunTurnAsync(_conversation, "", "Primera", Token);
+        MafAgentTurnResult first = await Runner(AnswersWith("ok")).RunTurnAsync(_conversation, "", "Primera", null, Token);
         ScriptedChatClient untouched = AnswersWith("no");
 
         string updated = await Runner(untouched).AppendSystemNoteAsync(first.SerializedSessionJson, "[sistema] La acción X se confirmó: Succeeded.", Token);
 
         untouched.Calls.Should().BeEmpty();
         ScriptedChatClient model = AnswersWith("vale");
-        await Runner(model).RunTurnAsync(_conversation, updated, "¿Qué pasó?", Token);
+        await Runner(model).RunTurnAsync(_conversation, updated, "¿Qué pasó?", null, Token);
         model.Calls[0].Messages.Select(m => m.Text).Should().Contain("[sistema] La acción X se confirmó: Succeeded.");
     }
 
@@ -193,8 +215,8 @@ public sealed class MafAgentRunnerTests
             : ScriptedChatClient.Text("Propuesto."));
         MafAgentRunner runner = Runner(model);
 
-        MafAgentTurnResult first = await runner.RunTurnAsync(_conversation, "", "crea Ahorro", Token);
-        MafAgentTurnResult second = await runner.RunTurnAsync(_conversation, first.SerializedSessionJson, "gracias", Token);
+        MafAgentTurnResult first = await runner.RunTurnAsync(_conversation, "", "crea Ahorro", null, Token);
+        MafAgentTurnResult second = await runner.RunTurnAsync(_conversation, first.SerializedSessionJson, "gracias", null, Token);
 
         first.ProposedActions.Should().ContainSingle().Which.ConversationId.Should().Be(_conversation.Id);
         _actions.Received(1).Add(first.ProposedActions[0]);
@@ -208,7 +230,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => ScriptedChatClient.ToolCall("ListNotes"));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "bucle", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "bucle", null, Token);
 
         (await act.Should().ThrowAsync<AgentLoopExhaustedException>()).Which.MaxIterations.Should().Be(5);
         await _sender.Received(5).Send(Arg.Any<GetNotesQuery>(), Arg.Any<CancellationToken>());
@@ -220,7 +242,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((i, _) => i < 5 ? ScriptedChatClient.ToolCall("ListNotes") : ScriptedChatClient.Text("listo"));
 
-        MafAgentTurnResult result = await Runner(model).RunTurnAsync(_conversation, "", "cinco", Token);
+        MafAgentTurnResult result = await Runner(model).RunTurnAsync(_conversation, "", "cinco", null, Token);
 
         result.Reply.Should().Be("listo");
     }
@@ -233,8 +255,8 @@ public sealed class MafAgentRunnerTests
             messages.Last().Role == ChatRole.User ? Reset() : turnCalls++ < 3 ? ScriptedChatClient.ToolCall("ListNotes") : ScriptedChatClient.Text("ok"));
         MafAgentRunner runner = Runner(model);
 
-        MafAgentTurnResult first = await runner.RunTurnAsync(_conversation, "", "uno", Token);
-        Func<Task> second = () => runner.RunTurnAsync(_conversation, first.SerializedSessionJson, "dos", Token);
+        MafAgentTurnResult first = await runner.RunTurnAsync(_conversation, "", "uno", null, Token);
+        Func<Task> second = () => runner.RunTurnAsync(_conversation, first.SerializedSessionJson, "dos", null, Token);
 
         await second.Should().NotThrowAsync("3 + 3 calls in two turns never exceed 5 in one turn");
 
@@ -250,7 +272,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new TimeoutRejectedException("inference timed out"));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<AgentTimeoutException>();
     }
@@ -260,7 +282,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new HttpRequestException("send failed", new TimeoutRejectedException("inference timed out")));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<AgentTimeoutException>();
     }
@@ -270,7 +292,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new InvalidOperationException("boom"));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -280,7 +302,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new TaskCanceledException("HttpClient.Timeout elapsed", new TimeoutException()));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<AgentTimeoutException>();
     }
@@ -290,7 +312,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new TimeoutException("socket timeout"));
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<AgentTimeoutException>();
     }
@@ -300,7 +322,7 @@ public sealed class MafAgentRunnerTests
     {
         ScriptedChatClient model = new((_, _) => throw new OperationCanceledException());
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         await act.Should().ThrowAsync<AgentTimeoutException>();
     }
@@ -315,7 +337,7 @@ public sealed class MafAgentRunnerTests
             throw new OperationCanceledException(cts.Token);
         });
 
-        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", cts.Token);
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", null, cts.Token);
 
         (await act.Should().ThrowAsync<OperationCanceledException>()).Which.Should().NotBeOfType<AgentTimeoutException>();
     }
@@ -323,11 +345,11 @@ public sealed class MafAgentRunnerTests
     [Fact]
     public async Task OnlyTheCurrentTimeContext_IsSentAndKept_NotTheOnesOfPreviousTurns()
     {
-        MafAgentTurnResult first = await Runner(AnswersWith("uno")).RunTurnAsync(_conversation, "", "primera", Token);
+        MafAgentTurnResult first = await Runner(AnswersWith("uno")).RunTurnAsync(_conversation, "", "primera", null, Token);
         _time.Advance(TimeSpan.FromDays(1));
         ScriptedChatClient model = AnswersWith("dos");
 
-        MafAgentTurnResult second = await Runner(model).RunTurnAsync(_conversation, first.SerializedSessionJson, "segunda", Token);
+        MafAgentTurnResult second = await Runner(model).RunTurnAsync(_conversation, first.SerializedSessionJson, "segunda", null, Token);
 
         List<string> contexts = model.Calls[0].Messages.Select(m => m.Text).Where(t => t.StartsWith(MafAgentRunner.TimeContextMarker)).ToList();
         contexts.Should().ContainSingle().Which.Should().Contain("2026-11-11T23:30:00Z");
@@ -342,7 +364,7 @@ public sealed class MafAgentRunnerTests
             .Returns<Task<ErrorOr<PaginatorResponse<NoteResponse>>>>(_ => throw new InvalidOperationException("detalle-secreto"));
         ScriptedChatClient model = new((i, _) => i == 0 ? ScriptedChatClient.ToolCall("ListNotes") : ScriptedChatClient.Text("no pude"));
 
-        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", null, Token);
 
         _logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Message.Contains("ListNotes") && e.Message.Contains("InvalidOperationException"));
         string.Join("\n", _logger.Entries.Select(e => e.Message + e.Exception)).Should().NotContain("detalle-secreto");
@@ -364,7 +386,7 @@ public sealed class MafAgentRunnerTests
             _ => ScriptedChatClient.Text("hecho"),
         });
 
-        await Runner(model).RunTurnAsync(_conversation, "", "mensaje-secreto-del-usuario", Token);
+        await Runner(model).RunTurnAsync(_conversation, "", "mensaje-secreto-del-usuario", null, Token);
 
         _logger.Entries.Should().Contain(e => e.Message.Contains("ProposeCreateNote") && e.Message.Contains(_conversation.Id.ToString()));
         _logger.Entries.Should().Contain(e => e.Message.Contains("ListNotes"));

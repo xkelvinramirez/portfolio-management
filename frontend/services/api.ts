@@ -12,6 +12,7 @@ import {
   type LoginUserResponse,
   type NoteResponse,
   type PaginatorResponse,
+  type PendingActionResult,
   type PortfolioAllocationGroupBy,
   type PortfolioAllocationResponse,
   type PortfolioEntryResponse,
@@ -23,6 +24,8 @@ import {
   type RegisterUserRequest,
   type RegisterUserResponse,
   type SendAgentMessageResponse,
+  type SendMafAgentMessageRequest,
+  type SendMafAgentMessageResponse,
   type UpdateCryptoCurrencyRequest,
   type UpdateExchangeRequest,
   type UpdateNoteRequest,
@@ -190,4 +193,21 @@ export const agentService = {
   // the caller is responsible for trimming any prior turns into this single string.
   chat: (message: string) =>
     api.post<SendAgentMessageResponse>("/Agent/chat", { message }).then((r) => r.data),
+};
+
+// ---------- MAF agent ----------
+
+export const mafAgentService = {
+  // The conversation lives on the server: send only the new message plus the id the
+  // previous turn returned (null starts a new one). `message` is capped at 2000 chars.
+  chat: (data: SendMafAgentMessageRequest) =>
+    api.post<SendMafAgentMessageResponse>("/MafAgent/chat", data).then((r) => r.data),
+
+  // Runs the proposed write. Once the action is claimed every outcome comes back as 200
+  // with a status (Succeeded, Failed, Stale); 4xx means it could not be claimed.
+  confirm: (id: string) =>
+    api.post<PendingActionResult>(`/MafAgent/pending-actions/${id}/confirm`).then((r) => r.data),
+
+  reject: (id: string) =>
+    api.post<void>(`/MafAgent/pending-actions/${id}/reject`).then((r) => r.data),
 };
