@@ -221,12 +221,14 @@ public class SendMafAgentMessageCommandHandlerTests
         _runner.RunTurnAsync(Arg.Any<MafConversation>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new AgentTimeoutException());
 
-        ErrorOr<SendMafAgentMessageResponse> result = await Send(_conversation.Id);
+        ErrorOr<SendMafAgentMessageResponse> result = await Send(_conversation.Id, "secreto del usuario");
 
         result.FirstError.Code.Should().Be("MafAgent.Timeout");
         result.FirstError.Type.Should().Be(ErrorType.Failure);
         _conversations.DidNotReceiveWithAnyArgs().Update(default!);
         _conversation.LastActivityAt.Should().NotBe(Now);
+        _logger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning);
+        _logger.Entries.Should().NotContain(e => e.Message.Contains("secreto"), "logs never carry message text");
     }
 
     [Fact]
