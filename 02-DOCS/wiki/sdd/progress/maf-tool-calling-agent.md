@@ -182,3 +182,73 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass (0 critical, 0 important, 4 minor). El `InternalsVisibleTo` de WebApi no contradice "sin tocar código", pero es una excepción a M1 a nivel de proyecto (registrada aquí).
 - **pautas obligatorias para T031** (minor 2): `Runner`, `Time` y la base InMemory se comparten dentro de un `IClassFixture`. Cada test usa ids de usuario propios y `Runner.ClearReceivedCalls()` (o una factoría por test) para que las aserciones de AC4 (`DidNotReceive`) y los `Returns` no se contaminen; no avanzar `Time` sin restaurarlo.
 - minor (diferidos): (1) no está verificado que `UseSetting` gane a las variables de entorno (ApplicationInsights/Serilog); fijarlo con `ConfigureAppConfiguration` o un guard si aparece; (3) el doble de transiciones solo prueba claim y mark-failed (reject y borde de caducidad cubiertos contra Postgres en T011); InMemory ignora FK y unique; (4) la aserción `Contains("Proxy")` depende del nombre de Castle.
+
+## Ramas — PR3 — 2026-11-11
+- Rama `feature/maf-tool-calling-agent-pr3` creada desde `origin/feature/maf-tool-calling-agent-pr2` (f0f07c5), sin upstream, para que un push automático del IDE no acabe en el PR2.
+
+## T013–T016 — 2026-11-11
+- status: complete
+- red: T013 no compilaba (CS0234/CS0246: `Payloads`, `PendingActionFactory`); T015 igual (`CurrentValuesReader`).
+- green: factoría 37/37; desfase y lector 19/19; unit 253/253; integración 11/11.
+- mutantes: 6, todos detectados (ver el registro de verificación).
+- **decisión (hueco del plan):** payloads tipados propios en `Application/MafAgent/Payloads` (id objetivo con `[PayloadTarget]` y todos los campos de la petición completa), porque `Update*Request` no lleva el id que necesita el comando. `Before` es el `FieldSnapshot` del lector. `BusinessTime` centraliza `Europe/Madrid` y los dos formatos de presentación.
+- files: src/Application/MafAgent/{PendingActionFactory,FieldSnapshot,BusinessTime,StaleCheck,CurrentValuesReader}.cs, src/Application/MafAgent/Payloads/PendingActionPayloads.cs, tests/Application.Tests/MafAgent/{PendingActionFactoryTests,StaleCheckTests,CurrentValuesReaderTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T013-T016.md)
+
+## T013–T016 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT pass (0 critical, 2 important, 5 minor).
+- important #1 descartado con evidencia: "G29" ya normaliza la escala de los decimales (ver la verificación de T017–T018).
+- important #2 corregido: `FieldSnapshotTests` (Kind Utc/Unspecified/Local/DateTimeOffset).
+- minor corregidos: #3 (comentario en StaleCheck), #4 (test del título con forma de fecha).
+- **pauta para T019/T023 (minor 5):** `ReadPayload`/`ReadBefore`/`ToDto` lanzan con datos corruptos o que no se descifran. En confirm, la lectura tras el reclamo queda dentro del `catch` documentado (→ Failed). Antes del reclamo y en chat, una excepción ahí es un fallo de servidor (500), no de negocio.
+- minor diferidos: #6 `BusinessTime.Zone` sin tzdata (igual que los handlers actuales); #7 visibilidad interna de helpers (sin impacto).
+
+## T017–T018 — 2026-11-11
+- status: complete
+- red: CS0246 (`PendingActionExecutor` ausente). green: 11/11; unit 272/272; integración 11/11.
+- mutantes: 5, todos detectados.
+- decision: el ejecutor no reenvía su `ct` y despacha siempre con `CancellationToken.None` (más fuerte que "quien lo llama pasa None"). `StatusReportSentResult` es el resultado de un informe enviado.
+- files: src/Application/MafAgent/PendingActionExecutor.cs, StaleCheck.cs (comentario), tests/Application.Tests/MafAgent/{PendingActionExecutorTests,FieldSnapshotTests,PendingActionFactoryTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T017-T018.md)
+
+## T019–T020 — 2026-11-11
+- status: complete
+- red: CS0234/CS0246 (handler ausente). green: 19/19; unit 291/291; integración 11/11.
+- mutantes: 8; 7 detectados y 1 equivalente (comprobación doble de dueño).
+- decisiones: `MafAgentErrors` con los códigos exactos de plan §0. Orden previo al reclamo: dueño → caducidad (acción o conversación) → estado. Tras el reclamo: leer el payload, comprobar el desfase y ejecutar, todo dentro del único `catch (Exception)` documentado; así un payload corrupto acaba en `Failed` (pauta de la revisión de T013–T016). La nota de sesión se añade FUERA del `catch`: si fallara, sería un 500 y la acción quedaría en `Executing` (nunca se re-ejecuta, "como mucho una vez").
+- files: src/Application/MafAgent/{MafAgentErrors.cs,Command/ConfirmPendingActionCommandHandler.cs,Command/ConfirmPendingActionCommandValidator.cs}, tests/Application.Tests/MafAgent/{ConfirmPendingActionCommandHandlerTests,ListLogger}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T019-T020.md)
+
+## T017–T020 — revisión por bloque — 2026-11-11
+- status: complete
+- review: VERDICT fail (1 important, 2 minor, 5 mutantes supervivientes). Ejecutor y respuestas a las preguntas de runtime: correctos (el SaveChanges interno escribe `Executing` sobre una fila ya en `Executing`, inocuo; tras `DiscardAll` la UoW no guarda nada).
+- important #1 corregido: la nota de sesión dentro del mismo `try`; si falla con el desenlace decidido, se devuelve y persiste el desenlace real sin nota. Sigue habiendo una única captura de `Exception` (dos ramas). Mi decisión anterior (nota fuera de la captura, 500 aceptado) era incorrecta: el plan solo acepta `Executing` permanente ante una caída del proceso.
+- minor #2 corregido: aviso si `TryMarkFailedAsync` devuelve false. minor #3 → pauta para T031 (el endpoint confirm sin token).
+- mutantes supervivientes: los 5 cubiertos con tests nuevos (unit 296/296).
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-11-T020-review.md)
+
+## T021–T022 — 2026-11-12
+- status: complete
+- red: CS0246 (comando, handler y validador ausentes). green: 15/15; unit 311/311; integración 11/11.
+- mutantes: 8, todos detectados (el de dueño de la acción, tras añadir un test de acción ajena en conversación propia).
+- decisiones: `RejectPendingActionCommand : IRequest<ErrorOr<Success>>` (el endpoint devolverá 204). **No es `ICommand`**: `TryRejectAsync` hace su propio commit y no queda nada para la UoW; la entidad cargada nunca se modifica, así la UoW no puede pisar un confirm concurrente. Mismo orden de comprobaciones que confirmar. Rechazar **no añade nota a la sesión**: ni el spec ni el plan la piden, y si el usuario pregunta, el agente puede consultar el estado. Se puede revisar en T023/T028 si hace falta.
+- files: src/Application/MafAgent/Command/{RejectPendingActionCommandHandler,RejectPendingActionCommandValidator}.cs, tests/Application.Tests/MafAgent/RejectPendingActionCommandHandlerTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T021-T022.md)
+## T021–T022 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado sin defecto: paridad del WHERE de `TryRejectAsync` con el handler (`now >= ExpiresAt` frente a `ExpiresAt > now`), nada pasa por la UoW ni por la caché, y el validador se registra.
+- minor #1 corregido: el mutante que quita la comprobación de dueño de la conversación sobrevivía; test nuevo (acción propia en conversación ajena) lo detecta. unit 312/312.
+- minor #2 aceptado: la caducidad de la conversación por inactividad no está en el SQL atómico; un rechazo que cruza el límite de 24 h a la vez sigue siendo inocuo (no escribe datos de negocio). Confirmar tiene la misma forma.
+## T023–T024 — 2026-11-12
+- status: complete
+- red: CS0246 (handler ausente). green: 24/24 (20 handler + 4 DI); unit 336/336; integración 11/11.
+- mutantes: 13, todos detectados.
+- decisiones: conversación nueva → el runner recibe sesión vacía `""` (el runner de T030 debe tratarla como sesión nueva) y la conversación se prepara con `Add` solo tras un turno correcto. Sesión corrupta → excepción (500), nada se guarda. El handler no tiene ejecutor ni `ISender`: no puede escribir. El chat sí usa el token de la petición (no escribe nada hasta el commit). `Application.Tests` añade `Microsoft.Extensions.DependencyInjection` 10.0.14 (la versión de `Microsoft.Extensions.Hosting` en Infrastructure) para el test de DI; MediatR exige `ILoggerFactory` registrado antes de `AddApplication`, como hace el host.
+- files: src/Application/{DependencyInjection.cs,MafAgent/Command/SendMafAgentMessageCommandHandler.cs,MafAgent/Command/SendMafAgentMessageCommandValidator.cs}, tests/Application.Tests/{Application.Tests.csproj,MafAgent/SendMafAgentMessageCommandHandlerTests.cs,MafAgent/MafAgentApplicationDiTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T023-T024.md)
+## T023–T024 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Descartado con evidencia: un turno fallido no guarda nada (`UnitOfWorkBehavior` solo guarda sin error; el `DbContext` es por petición); EF ordena las inserciones por FK aunque la conversación se añada después de las acciones; `Encrypt("")` ida y vuelta correcto; el host registra logging antes de `AddApplication`.
+- minor corregido: el mutante "texto del mensaje en el log de timeout" sobrevivía (el de límite de pasos ya lo detectaba); el test de timeout ahora lo comprueba. unit 336/336.
+- minor aceptados: dos turnos simultáneos en una conversación → gana el último en la sesión (ya aceptado en plan §6, M7, token `xmin` como mitigación futura); la propiedad "nada se guarda tras un fallo" de punta a punta la cubren T031/T033.
