@@ -31,6 +31,7 @@ timestamp: 2026-11-11T12:00:00Z
 - [Agente MAF con tool-calling](sdd/analysis/maf-tool-calling-agent.md) — GATE: PASS (ejecución 4: 0 HIGH; 9 MEDIUM/LOW corregidos, 4 aceptados), 2026-11-11
 
 ### sdd/verifications
+- [maf-tool-calling-agent — T035–T036 (checklist con 7B, gate final)](sdd/verifications/maf-tool-calling-agent-2026-11-12-T035-T036.md) — PASS con `qwen2.5:7b-instruct` (9/9), 2026-11-12
 - [maf-tool-calling-agent — T034–T036 (regresión, docs, gate final)](sdd/verifications/maf-tool-calling-agent-2026-11-12-T034-T036.md) — FAIL solo por la checklist manual de T035, 2026-11-12
 - [maf-tool-calling-agent — T033 (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-12-T033.md) — PASS (alcance de tarea), 2026-11-12
 - [maf-tool-calling-agent — T031–T032 (pre-commit)](sdd/verifications/maf-tool-calling-agent-2026-11-12-T031-T032.md) — PASS (alcance de tarea), 2026-11-12
