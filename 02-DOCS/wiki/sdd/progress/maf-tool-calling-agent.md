@@ -281,3 +281,10 @@ slug: maf-tool-calling-agent
   - Paginación compartida en `ToolPaging` (refactor de las herramientas de lectura, sin cambio de comportamiento).
 - files: src/Infrastructure/MafAgent/Tools/{MafAgentProposeTools,ToolPaging,MafAgentReadTools}.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/{MafAgentProposeToolsTests,MafAgentReadToolsTests}.cs
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T027-T028.md)
+## T027–T028 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado: el `Before` recién propuesto no sale `Stale` al confirmar (mismo lector y formato), "0.50" frente a "0.5" no es un cambio falso, ningún camino de fallo prepara nada, dueño por consultas con ámbito de usuario.
+- corregido (menor #3, fallo real): en `ProposeSendStatusReport` una fecha sin hora ("2026-09-30") se leía como medianoche de Madrid = 22:00 UTC del día anterior, y el informe usa `.Date` UTC → se perdía el último día. Ahora un límite de periodo con solo fecha es ese día a las 00:00 UTC, igual que el periodo por defecto (`TryParsePeriodBound`). Test rojo sin el arreglo.
+- corregido: mutantes supervivientes (edición con cantidad 0, precio negativo, hora del hueco de verano) y huecos de test (precio 0 al crear, ids ausentes). 50/50; unit 418/418; integración 11/11.
+- minor aceptados / para el usuario: (1) en una edición, un valor en blanco = "no cambia": no se puede vaciar una descripción por el agente; (2) hora ambigua del cambio de otoño → horario estándar; fechas no ISO se leen en cultura invariante (la descripción pide ISO); (4) longitudes no se validan al proponer (al confirmar sería `Failed`).
+- abierto para el usuario: en `ProposeCreateEntry`/`ProposeUpdateEntry`, una fecha SIN hora ("2026-11-10") se lee como medianoche de Madrid = 23:00 UTC del día 9, y Domain agrupa las entradas por día UTC. Sigue la regla del plan ("sin offset → Madrid"), pero puede mostrar la entrada un día antes.

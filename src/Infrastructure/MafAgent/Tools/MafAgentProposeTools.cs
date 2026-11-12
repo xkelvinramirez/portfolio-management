@@ -333,8 +333,8 @@ internal sealed class MafAgentProposeTools(
     [Description("Proposes sending the status report of one of the user's portfolios by e-mail. Without a period it covers the previous calendar month. Nothing is sent until the user confirms.")]
     public async Task<object> ProposeSendStatusReport(
         [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId,
-        [Description("Optional period start, together with periodEnd. " + DateHint)] string? periodStart = null,
-        [Description("Optional period end, together with periodStart. " + DateHint)] string? periodEnd = null,
+        [Description("Optional first day of the period (yyyy-MM-dd), together with periodEnd")] string? periodStart = null,
+        [Description("Optional last day of the period (yyyy-MM-dd), together with periodStart")] string? periodEnd = null,
         CancellationToken cancellationToken = default)
     {
         if (portfolioId is null)
@@ -349,7 +349,7 @@ internal sealed class MafAgentProposeTools(
             // Resolved NOW, with the same function the report handler uses: the payload never has a null period.
             (start, end) = PortfolioStatusReportPeriod.PreviousCalendarMonth(timeProvider.GetUtcNow().UtcDateTime);
         }
-        else if (!TryParseInstant(periodStart, out start) || !TryParseInstant(periodEnd, out end) || start > end)
+        else if (!TryParsePeriodBound(periodStart, out start) || !TryParsePeriodBound(periodEnd, out end) || start > end)
         {
             return Missing("period");
         }
@@ -465,6 +465,21 @@ internal sealed class MafAgentProposeTools(
         }
     }
 
+    /// <summary>
+    /// The report period is made of DAYS: the report handler and the Domain use the UTC date of each bound, and the
+    /// default period is 00:00 UTC of each day. So a date without time ("2026-09-30") is that calendar day at
+    /// 00:00 UTC, not Madrid midnight (which is the previous UTC day). A full instant follows TryParseInstant.
+    /// </summary>
+    private static bool TryParsePeriodBound(string? text, out DateTime utc)
+    {
+        if (DateTime.TryParseExact(text?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime day))
+        {
+            utc = DateTime.SpecifyKind(day, DateTimeKind.Utc);
+            return true;
+        }
+
+        return TryParseInstant(text, out utc);
+    }
     // The current values come from ICurrentValuesReader in the FieldSnapshot format ("G29", "O").
     private static long ParseLong(string? value) => long.Parse(value!, CultureInfo.InvariantCulture);
 

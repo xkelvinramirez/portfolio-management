@@ -421,6 +421,46 @@ public sealed class MafAgentProposeToolsTests
         NothingStaged();
     }
 
+    [Fact]
+    public async Task ProposeSendStatusReport_DateOnlyBounds_AreThoseCalendarDays_NotMadridMidnight()
+    {
+        await _tools.ProposeSendStatusReport(OwnedPortfolioId, "2026-09-01", "2026-09-30", Token);
+
+        PayloadOf<SendStatusReportPayload>(Staged()).Should().Be(new SendStatusReportPayload(
+            OwnedPortfolioId, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Theory]
+    [InlineData(0.0, null, null, "MissingOrAmbiguous:quantity")]
+    [InlineData(null, -0.01, null, "MissingOrAmbiguous:pricePerUnit")]
+    [InlineData(null, null, "mañana", "MissingOrAmbiguous:recordedAt")]
+    [InlineData(null, null, "2026-03-29T02:30:00", "MissingOrAmbiguous:recordedAt")] // skipped by the Madrid spring-forward change
+    public async Task ProposeUpdateEntry_InvalidChanges_StageNothing(double? quantity, double? price, string? recordedAt, string expected)
+    {
+        EntryNow();
+
+        (await _tools.ProposeUpdateEntry(9, (decimal?)quantity, (decimal?)price, recordedAt, cancellationToken: Token)).Should().Be(expected);
+        NothingStaged();
+    }
+
+    [Fact]
+    public async Task ProposeCreateEntry_WithAZeroPrice_IsAccepted()
+    {
+        await _tools.ProposeCreateEntry(OwnedPortfolioId, "BTC", "Binance", 1m, 0m, "2026-11-10T18:30:00Z", Token);
+
+        PayloadOf<CreateEntryPayload>(Staged()).PricePerUnit.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task MissingTargets_AreMissingOrAmbiguous()
+    {
+        (await _tools.ProposeUpdateEntry(null, quantity: 1m, cancellationToken: Token)).Should().Be("MissingOrAmbiguous:entryId");
+        (await _tools.ProposeUpdateNote(" ", title: "x", cancellationToken: Token)).Should().Be("MissingOrAmbiguous:noteId");
+        (await _tools.ProposeUpdatePortfolio(null, name: "x", cancellationToken: Token)).Should().Be("MissingOrAmbiguous:portfolioId");
+        (await _tools.ProposeRefreshPrices(null, Token)).Should().Be("MissingOrAmbiguous:portfolioId");
+        (await _tools.ProposeSendStatusReport(null, null, null, Token)).Should().Be("MissingOrAmbiguous:portfolioId");
+        NothingStaged();
+    }
     // ---- the AI functions ----
 
     [Fact]
