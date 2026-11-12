@@ -10,7 +10,8 @@ namespace Application.MafAgent.Interfaces;
 public interface IMafAgentRunner
 {
     Task<MafAgentTurnResult> RunTurnAsync(
-        MafConversation conversation, string decryptedSessionJson, string message, CancellationToken ct);
+        MafConversation conversation, string decryptedSessionJson, string message, ActivePortfolio? activePortfolio,
+        CancellationToken ct);
 
     /// <summary>Appends a system note (e.g. the outcome of a confirmed action) and returns the updated session.</summary>
     Task<string> AppendSystemNoteAsync(string decryptedSessionJson, string note, CancellationToken ct);
@@ -25,3 +26,9 @@ public sealed record MafAgentTurnResult(
     string Reply,
     string SerializedSessionJson,
     IReadOnlyList<PendingAction> ProposedActions);
+
+/// <summary>
+/// The portfolio the user is looking at, already checked to be theirs. The runner tells the model to use it whenever
+/// the user does not name another portfolio.
+/// </summary>
+public sealed record ActivePortfolio(long Id, string Name);

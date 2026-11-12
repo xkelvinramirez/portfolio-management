@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Bot } from "lucide-react";
 import { usePortfolios } from "@/hooks/usePortfolios";
 import { usePortfolioHistory, usePortfolioHoldings } from "@/hooks/usePortfolioAnalytics";
 import Link from "next/link";
 import { useAppStore } from "@/store/useAppStore";
+import { MafAgentPanel } from "@/components/agent/MafAgentPanel";
 import { AlertsStrip } from "@/components/dashboard/AlertsStrip";
 import { AllocationChart } from "@/components/dashboard/AllocationChart";
 import { AssetSummaryCards } from "@/components/dashboard/AssetSummaryCards";
-import { buttonClassName } from "@/components/ui/Button";
+import { Button, buttonClassName } from "@/components/ui/Button";
 import { ErrorNotice } from "@/components/ui/ErrorNotice";
 import { HoldingsTable } from "@/components/dashboard/HoldingsTable";
 import { LatestNotesWidget } from "@/components/dashboard/LatestNotesWidget";
@@ -25,6 +27,7 @@ export default function DashboardPage() {
   } = usePortfolios({ limit: 50 });
   const selectedPortfolioId = useAppStore((state) => state.selectedPortfolioId);
   const setSelectedPortfolioId = useAppStore((state) => state.setSelectedPortfolioId);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const portfolios = useMemo(() => portfoliosPage?.data ?? [], [portfoliosPage]);
   // selectedPortfolioId is persisted in localStorage, so it can point at a
@@ -93,9 +96,22 @@ export default function DashboardPage() {
             </select>
           </label>
         )}
-        <h1 className="text-2xl font-bold tracking-tight">
-          {activePortfolio?.name ?? "Portfolio"}
-        </h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {activePortfolio?.name ?? "Portfolio"}
+          </h1>
+          <Button
+            variant="ghost"
+            onClick={() => setAssistantOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+          >
+            <span className="flex items-center gap-1.5">
+              <Bot size={16} strokeWidth={1.75} aria-hidden />
+              Asistente
+            </span>
+          </Button>
+        </div>
         <p className="tabular text-4xl font-extrabold">
           {currentValue !== undefined ? formatCurrency(currentValue) : "—"}
         </p>
@@ -135,6 +151,15 @@ export default function DashboardPage() {
       )}
 
       <LatestNotesWidget />
+
+      {activePortfolio && (
+        <MafAgentPanel
+          open={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+          portfolioId={activePortfolio.id}
+          portfolioName={activePortfolio.name}
+        />
+      )}
     </div>
   );
 }

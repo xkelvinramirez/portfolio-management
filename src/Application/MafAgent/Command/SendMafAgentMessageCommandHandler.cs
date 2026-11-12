@@ -1,6 +1,7 @@
 using Application.Common.Messaging;
 using Application.Common.Security;
 using Application.MafAgent.Interfaces;
+using Application.Portfolios.Interfaces;
 using Contracts.MafAgent;
 using Domain.Common.Exceptions;
 using Domain.Entities;
@@ -22,6 +23,7 @@ public sealed record SendMafAgentMessageCommand(SendMafAgentMessageRequest Reque
 public sealed class SendMafAgentMessageCommandHandler(
     IMafConversationRepository conversationRepository,
     IMafAgentRunner agentRunner,
+    IPortfolioRepository portfolioRepository,
     PendingActionFactory factory,
     IEncryptionService encryptionService,
     ICurrentUserProvider currentUserProvider,
@@ -63,10 +65,22 @@ public sealed class SendMafAgentMessageCommandHandler(
             session = encryptionService.Decrypt(conversation.EncryptedSessionState);
         }
 
+        ActivePortfolio? activePortfolio = null;
+        if (command.Request.PortfolioId is long portfolioId)
+        {
+            Portfolio? portfolio = await portfolioRepository.GetByIdAsync(portfolioId, cancellationToken);
+            if (portfolio is null || portfolio.UserId != userId)
+            {
+                return MafAgentErrors.PortfolioNotFound(portfolioId);
+            }
+
+            activePortfolio = new ActivePortfolio(portfolio.Id, portfolio.Name);
+        }
+
         MafAgentTurnResult turn;
         try
         {
-            turn = await agentRunner.RunTurnAsync(conversation, session, command.Request.Message, cancellationToken);
+            turn = await agentRunner.RunTurnAsync(conversation, session, command.Request.Message, activePortfolio, cancellationToken);
         }
         catch (AgentLoopExhaustedException exception)
         {
