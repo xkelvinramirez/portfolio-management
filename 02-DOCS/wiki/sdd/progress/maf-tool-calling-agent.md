@@ -312,3 +312,13 @@ slug: maf-tool-calling-agent
 - minor #3 aceptado: los parámetros `= null` aparecen como opcionales en el esquema; encaja con `MissingOrAmbiguous`.
 - **Decisión del usuario (2026-11-12):** una fecha SIN hora que llega a una herramienta es ese día a las 00:00 UTC (entradas y periodo del informe), no la medianoche de Madrid. Una regla única en `TryParseInstant`; se elimina `TryParsePeriodBound`. Anotada en plan §0 "Payloads tipados" y en `harness/decisions.md`.
 - 10 mutantes de los arreglos, todos detectados. unit 449/449; integración 11/11.
+## Rama PR5 — 2026-11-12
+- `feature/maf-tool-calling-agent-pr5` creada por decisión del usuario, apilada sobre la pr4 (`e2cba62`). Alcance: T031–T036.
+
+## T031–T032 — 2026-11-12
+- status: complete
+- red: 17/18 con 404 (rutas ausentes). green: 18/18; unit 467/467; integración 11/11.
+- mutantes: 4, todos detectados.
+- decisiones: grupo `/api/v1/MafAgent/`, etiqueta `MafAgent`, `RequireAuthorization`. `confirm` envía el comando SIN token (cierra la pauta de la revisión T017–T020). `reject` → 204. Sin `Idempotency-Key` (desviación aceptada, analyze F5). Los tests siembran acciones con `PendingAction.Create` y el `IEncryptionService` real del host.
+- files: src/WebApi.MinimalAPI/Endpoints/{MafAgent/MafAgentEndpoints.cs,Common/EndpointRegistrar.cs,Common/EndpointTags.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/Http/MafAgentEndpointsTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T031-T032.md)
