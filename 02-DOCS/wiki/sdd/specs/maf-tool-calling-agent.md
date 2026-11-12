@@ -18,7 +18,7 @@ status: clarified
 
 El único usuario de la app quiere operar sus portafolios hablando: preguntar y también **actuar**
 (registrar una compra, corregir una entrada, crear un portafolio, refrescar precios). El agente
-actual solo responde preguntas: sus cuatro herramientas son de lectura (en la rama base `development`). Todo cambio de datos
+actual solo responde preguntas: sus cinco herramientas son de lectura (en `development` desde el PR #19). Todo cambio de datos
 obliga a salir de la conversación y usar la UI o la API a mano.
 
 Además, el agente actual está construido sobre un framework que el proyecto quiere sustituir
@@ -156,10 +156,11 @@ agente.
 
 ## Acceptance criteria
 
-- AC1 — Given un usuario con portafolios, When hace cualquiera de las cuatro preguntas que hoy
+- AC1 — Given un usuario con portafolios, When hace cualquiera de las cinco preguntas que hoy
   responde el agente actual en `development` (listar sus portafolios; valor total actual de un
-  portafolio; desglose actual por activo; fecha de máximo o mínimo de un activo), Then el agente
-  nuevo responde con los mismos datos subyacentes que el actual.
+  portafolio; desglose actual por activo; fecha de máximo o mínimo de un activo; comparación de
+  valores por activo entre dos fechas), Then el agente nuevo responde con los mismos datos
+  subyacentes que el actual (incluidas las fechas inválidas o invertidas, que se rechazan igual).
 - AC1b — Given un usuario con datos, When pregunta por sus entradas, el historial de un
   portafolio, su distribución, los catálogos de criptomonedas o exchanges, o sus notas, Then la
   respuesta contiene sus datos reales. And si no existen o no son suyos, el agente dice que no
@@ -238,9 +239,9 @@ agente.
   *Base:* la opción "acción pendiente" elegida por el usuario: el modelo no puede confirmarse a sí
   mismo. *Riesgo:* el plan define su forma concreta. La página de chat necesitará un botón o algo
   equivalente cuando deje de estar diferida.
-- **decisión diferida** — comparación de valores por activo entre dos fechas. Hoy solo existe en
-  la rama sin fusionar `feature/portfolio-asset-value-comparison`. Se añadirá al agente MAF cuando
-  esa feature llegue a `development`.
+- ~~**decisión diferida** — comparación de valores por activo entre dos fechas.~~ **Resuelta
+  2026-11-11:** la feature llegó a `development` (PR #19) y el usuario decidió incorporarla. Ahora
+  forma parte de AC1.
 - **decisión diferida** — retirar el agente actual y en qué condiciones (criterio de relevo).
 - **decisión diferida** — borrar desde el agente, con confirmación.
 - **decisión diferida** — usar el agente nuevo desde la página de chat del frontend.
@@ -260,6 +261,7 @@ agente.
 | 2026-11-11 | Hueco nuevo: ¿qué pasa si un recurso cambia entre la propuesta y la confirmación de una edición? | Se rechaza y se ofrece volver a proponer (AC18). | Nunca pisar en silencio un cambio que el usuario no vio. |
 | 2026-11-11 | (Surgida en `plan`) Las notas no tienen dueño en el sistema (sin usuario, partición por categoría). ¿Cómo las trata el agente? | Con la misma visibilidad que la API de notas: cualquier usuario autenticado. AC1b, en "no son suyos", no aplica a las notas. | Decisión del usuario. Es una app de un solo usuario, y dar dueño a las notas sería scope nuevo con migración. |
 | 2026-11-11 | (Surgida en analyze, ejecución 3) AC1 prometía paridad con 5 preguntas, pero en `development` el agente SK solo tiene 4; la comparación entre fechas vive en otra rama sin fusionar. | AC1 = 4 preguntas. La comparación pasa a decisión diferida. | Decisión del usuario (opción a). No acopla esta feature a otra rama ni duplica su lógica de Domain. El error vino de leer en specify la carpeta principal, que estaba en otra rama. |
+| 2026-11-11 | (Disparador cumplido) La comparación entre fechas llegó a `development` con el PR #19. ¿La incorpora el agente MAF? | Sí. AC1 vuelve a 5 preguntas. | Decisión del usuario. Cierra la decisión diferida de la ejecución 3 de analyze (H1). |
 | 2026-11-11 | Defaults asumidos sin objeción: fechas absolutas con zona (AC19), antes→después en ediciones, activo o exchange inexistente → no hay propuesta, respuesta en el idioma del usuario, conversación protegida en reposo como las notas. | Asumidos. | Valores seguros por defecto. Visibles en la acción pendiente antes de escribir. |
 
 ### Resultado por punto del handoff
@@ -286,4 +288,5 @@ agente.
 | 2026-11-11 | Revisión con ojos frescos: confirmación determinista fuera del chat, registro de auditoría en Behaviour, AC2/AC3 generalizados a las 8 escrituras, lista explícita de las 5 preguntas (AC1), AC1b (lecturas nuevas), AC10 limitado a crear/editar más AC10b (refresco parcial) y AC14 (límites), fallback de notas y ciclo de vida de acciones pendientes. | 8 hallazgos de un revisor con contexto limpio; todos se aceptaron sin cambiar decisiones del usuario. |
 | 2026-11-11 | Spec aprobada por el usuario ("la apruebo"). | Gate de `specify` (paso 9) superado en modo con paradas. |
 | 2026-11-11 | AC1 reducido a 4 preguntas; comparación entre fechas diferida (analyze ejecución 3, H1). | Premisa falsa sobre la rama base; decisión del usuario. |
+| 2026-11-11 | AC1 vuelve a 5 preguntas: se incorpora la comparación entre fechas. | El PR #19 la llevó a `development`; decisión del usuario. |
 | 2026-11-11 | Clarify: 4 decisiones del usuario, 2 puntos resueltos internamente, 1 hueco nuevo (desfase en ediciones), AC15–AC19, status → clarified. | Fase `clarify`. |
