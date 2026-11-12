@@ -252,3 +252,63 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass, sin hallazgos importantes. Descartado con evidencia: un turno fallido no guarda nada (`UnitOfWorkBehavior` solo guarda sin error; el `DbContext` es por petición); EF ordena las inserciones por FK aunque la conversación se añada después de las acciones; `Encrypt("")` ida y vuelta correcto; el host registra logging antes de `AddApplication`.
 - minor corregido: el mutante "texto del mensaje en el log de timeout" sobrevivía (el de límite de pasos ya lo detectaba); el test de timeout ahora lo comprueba. unit 336/336.
 - minor aceptados: dos turnos simultáneos en una conversación → gana el último en la sesión (ya aceptado en plan §6, M7, token `xmin` como mitigación futura); la propiedad "nada se guarda tras un fallo" de punta a punta la cubren T031/T033.
+## Rama PR4 — 2026-11-12
+- `feature/maf-tool-calling-agent-pr4` creada por decisión del usuario, apilada sobre la pr3 (`70190f9`). Alcance: T025–T030.
+
+## T025–T026 — 2026-11-12
+- status: complete
+- red: CS0234/CS0246 (`MafAgentReadTools` ausente). green: 32/32; unit 368/368; integración 11/11.
+- mutantes: 14, todos detectados (2 tras añadir casos).
+- decisiones: `MafAgentReadTools` (internal sealed, `Infrastructure/MafAgent/Tools`) separado de las herramientas de propuesta (T028); `MafAgentTools` las compondrá. Las 5 heredadas replican el código del plugin SK (no se comparte: `*/Agent/` no se toca) con `TimeProvider` en vez de `DateTime.UtcNow` y `CultureInfo.InvariantCulture` en los límites opcionales del pico (el plugin usa la cultura actual; en `yyyy-MM-dd` coinciden). Errores como texto para el modelo: `NotFound`, `InvalidDates` (el plugin SK lanza `ArgumentException`). El resto usa las consultas existentes por `ISender` recorriendo todas las páginas (límite 100). `ListExchanges` no expone `ApiKey`; `ListNotes` no expone el contenido. Records de salida propios (`Maf*`), no los del plugin SK.
+- files: src/Infrastructure/MafAgent/Tools/MafAgentReadTools.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/MafAgentReadToolsTests.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T025-T026.md)
+## T025–T026 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado: los handlers de entries, history y allocation filtran por dueño; ni la `ApiKey` del exchange ni el contenido de las notas del listado llegan al modelo; la paginación no se queda en bucle.
+- minor corregido: el test de historial no comprobaba la fecha de cada punto (ahora sí, en el commit de T027–T028).
+- minor aceptados: el pico usa cultura invariante (el plugin SK la actual; coinciden en `yyyy-MM-dd`); un error de validación de una consulta se devuelve al modelo como `NotFound`; los listados no tienen tope (el plan no lo pide).
+
+## T027–T028 — 2026-11-12
+- status: complete
+- red: CS0246 (`MafAgentProposeTools` ausente). green: 43/43; lectura 32/32; unit 411/411; integración 11/11.
+- mutantes: 19, todos detectados (2 tras añadir tests).
+- decisiones:
+  - **Desviación del plan §0 "Payloads tipados":** las fechas de las herramientas son `string`, no `DateTimeOffset`. System.Text.Json leería una fecha sin offset con la zona del SERVIDOR, y la regla es Madrid. La herramienta interpreta: con `Z`/offset ese instante; sin offset hora de Madrid (una hora inexistente por el cambio de verano → `MissingOrAmbiguous`). El payload sigue con `Kind=Utc`.
+  - Parámetros nullable: un dato que falta da `MissingOrAmbiguous:<campo>` en vez de un error de enlace de argumentos. En las ediciones, un valor en blanco cuenta como "no cambia".
+  - `Before` = la salida de `ICurrentValuesReader`, la misma fuente que la comprobación de desfase al confirmar; la fusión parsea esos valores ("G29", "O").
+  - Dueño por `GetPortfolioByIdQuery` (ya lo comprueba): las herramientas no usan repositorios de negocio.
+  - `BeginTurn(conversationId)` lo llamará el runner (T030) antes de cada turno; `ProposedActions` son las instancias preparadas.
+  - Paginación compartida en `ToolPaging` (refactor de las herramientas de lectura, sin cambio de comportamiento).
+- files: src/Infrastructure/MafAgent/Tools/{MafAgentProposeTools,ToolPaging,MafAgentReadTools}.cs, tests/WebApi.MinimalAPI.Tests/MafAgent/Tools/{MafAgentProposeToolsTests,MafAgentReadToolsTests}.cs
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T027-T028.md)
+## T027–T028 — revisión por bloque — 2026-11-12
+- status: complete
+- review: VERDICT pass, sin hallazgos importantes. Comprobado: el `Before` recién propuesto no sale `Stale` al confirmar (mismo lector y formato), "0.50" frente a "0.5" no es un cambio falso, ningún camino de fallo prepara nada, dueño por consultas con ámbito de usuario.
+- corregido (menor #3, fallo real): en `ProposeSendStatusReport` una fecha sin hora ("2026-09-30") se leía como medianoche de Madrid = 22:00 UTC del día anterior, y el informe usa `.Date` UTC → se perdía el último día. Ahora un límite de periodo con solo fecha es ese día a las 00:00 UTC, igual que el periodo por defecto (`TryParsePeriodBound`). Test rojo sin el arreglo.
+- corregido: mutantes supervivientes (edición con cantidad 0, precio negativo, hora del hueco de verano) y huecos de test (precio 0 al crear, ids ausentes). 50/50; unit 418/418; integración 11/11.
+- minor aceptados / para el usuario: (1) en una edición, un valor en blanco = "no cambia": no se puede vaciar una descripción por el agente; (2) hora ambigua del cambio de otoño → horario estándar; fechas no ISO se leen en cultura invariante (la descripción pide ISO); (4) longitudes no se validan al proponer (al confirmar sería `Failed`).
+- abierto para el usuario: en `ProposeCreateEntry`/`ProposeUpdateEntry`, una fecha SIN hora ("2026-11-10") se lee como medianoche de Madrid = 23:00 UTC del día 9, y Domain agrupa las entradas por día UTC. Sigue la regla del plan ("sin offset → Madrid"), pero puede mostrar la entrada un día antes.
+## T029–T030 — 2026-11-12
+- status: complete
+- red: CS0234/CS0246 (`Infrastructure.MafAgent.Runner` ausente). green: runner 14/14, fábrica 4/4, DI 2/2; unit 439/439; integración 11/11.
+- mutantes: 17; 16 detectados (1 tras fijar el número de llamadas al modelo) y 1 que no compila.
+- decisiones:
+  - **Límite de pasos:** el middleware de invocación de funciones (`AIAgentBuilder.Use`) cuenta las llamadas del turno. Al pasar el límite no ejecuta la herramienta, pone `Terminate` y deja una marca. El runner lanza `AgentLoopExhaustedException` al terminar `RunAsync`. No se lanza desde dentro del middleware: no depende de si `FunctionInvokingChatClient` captura excepciones de herramientas.
+  - Contexto horario: un mensaje de sistema por turno, antes del mensaje del usuario (queda en el historial de la sesión).
+  - `AppendSystemNoteAsync`: añade un mensaje de sistema con `TryGetInMemoryChatHistory`/`SetInMemoryChatHistory`, sin llamar al modelo.
+  - Fábrica del cliente: modelo de razonamiento de `AiOptions`, transporte del `HttpClient` "InferenceClient" (el timeout de Polly ya registrado para SK). Azure sin endpoint → `InvalidOperationException`.
+  - Log de fallo de herramienta: solo el TIPO de excepción, vía filtro de excepción que registra y devuelve false (no hay `catch` de `Exception`).
+  - **Defecto de T028 corregido aquí:** los parámetros nullable de `Propose*` no tenían `= null`, así que `AIFunctionFactory` los marcaba obligatorios y un dato omitido fallaba al enlazar en vez de llegar como `MissingOrAmbiguous:<campo>`. Test nuevo que invoca el `AIFunction` sin `pricePerUnit`.
+  - DI: `AddMafAgent()` en Infrastructure (herramientas, fábrica y runner scoped; `IMafAgentRunner` → `MafAgentRunner`). `*/Agent/` sin cambios.
+- files: src/Infrastructure/{DependencyInjection.cs,MafAgent/Runner/MafAgentRunner.cs,MafAgent/Runner/MafChatClientFactory.cs,MafAgent/Tools/MafAgentProposeTools.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/{Runner/*,Tools/MafAgentProposeToolsTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T029-T030.md)
+## T029–T030 — revisión por bloque + decisión de fechas — 2026-11-12
+- status: complete
+- review: VERDICT fail, 1 important (reproducido por el revisor con una sonda real).
+- **important #1 corregido (AC14):** el cliente de OpenAI tenía su propio timeout de red de 100 s y 3 reintentos, y el `HttpClient` su propio `Timeout` de 100 s. Con `Ai:RequestTimeoutSeconds` = 240 (Development) la petición se cortaba a los 100 s, se reintentaba (unos 400 s en total) y salía como `TaskCanceledException` → 500, no como `MafAgent.Timeout`. Ahora: `HttpClient.Timeout`, `NetworkTimeout` infinitos y `ClientRetryPolicy(0)` (OpenAI y Azure): solo el pipeline de Polly de "InferenceClient" corta y reintenta. El runner trata como timeout `TimeoutRejectedException`, `TimeoutException` y cualquier cancelación que el llamador NO pidió; una cancelación pedida se propaga tal cual. El agente SK tiene el mismo hueco, pero está congelado (no se toca).
+- minor #2 corregido: el mensaje de contexto horario se acumulaba en el historial (varias "horas actuales" contradictorias). Ahora solo queda el del turno actual (`DropPreviousTimeContexts`).
+- minor #4 corregido: Ollama sin `Endpoint` → error de configuración (antes llamaba a api.openai.com en silencio).
+- mutantes supervivientes cubiertos: mapeo del puerto `IMafAgentRunner` → `MafAgentRunner` en producción (`AddMafAgent` pasa a `internal` para probarlo), uso del transporte y ausencia de reintentos del cliente, log de una herramienta que falla (solo el tipo de excepción).
+- minor #3 aceptado: los parámetros `= null` aparecen como opcionales en el esquema; encaja con `MissingOrAmbiguous`.
+- **Decisión del usuario (2026-11-12):** una fecha SIN hora que llega a una herramienta es ese día a las 00:00 UTC (entradas y periodo del informe), no la medianoche de Madrid. Una regla única en `TryParseInstant`; se elimina `TryParsePeriodBound`. Anotada en plan §0 "Payloads tipados" y en `harness/decisions.md`.
+- 10 mutantes de los arreglos, todos detectados. unit 449/449; integración 11/11.
