@@ -240,3 +240,10 @@ slug: maf-tool-calling-agent
 - review: VERDICT pass, sin hallazgos importantes. Comprobado sin defecto: paridad del WHERE de `TryRejectAsync` con el handler (`now >= ExpiresAt` frente a `ExpiresAt > now`), nada pasa por la UoW ni por la caché, y el validador se registra.
 - minor #1 corregido: el mutante que quita la comprobación de dueño de la conversación sobrevivía; test nuevo (acción propia en conversación ajena) lo detecta. unit 312/312.
 - minor #2 aceptado: la caducidad de la conversación por inactividad no está en el SQL atómico; un rechazo que cruza el límite de 24 h a la vez sigue siendo inocuo (no escribe datos de negocio). Confirmar tiene la misma forma.
+## T023–T024 — 2026-11-12
+- status: complete
+- red: CS0246 (handler ausente). green: 24/24 (20 handler + 4 DI); unit 336/336; integración 11/11.
+- mutantes: 13, todos detectados.
+- decisiones: conversación nueva → el runner recibe sesión vacía `""` (el runner de T030 debe tratarla como sesión nueva) y la conversación se prepara con `Add` solo tras un turno correcto. Sesión corrupta → excepción (500), nada se guarda. El handler no tiene ejecutor ni `ISender`: no puede escribir. El chat sí usa el token de la petición (no escribe nada hasta el commit). `Application.Tests` añade `Microsoft.Extensions.DependencyInjection` 10.0.14 (la versión de `Microsoft.Extensions.Hosting` en Infrastructure) para el test de DI; MediatR exige `ILoggerFactory` registrado antes de `AddApplication`, como hace el host.
+- files: src/Application/{DependencyInjection.cs,MafAgent/Command/SendMafAgentMessageCommandHandler.cs,MafAgent/Command/SendMafAgentMessageCommandValidator.cs}, tests/Application.Tests/{Application.Tests.csproj,MafAgent/SendMafAgentMessageCommandHandlerTests.cs,MafAgent/MafAgentApplicationDiTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T023-T024.md)

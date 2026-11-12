@@ -1,4 +1,6 @@
 ﻿using Application.Common.Behaviors;
+using Application.MafAgent;
+using Application.MafAgent.Interfaces;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +35,11 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);
+
+        // MafAgent (plan §0 "Registro y validadores"): scoped, like the repositories they consume.
+        services.AddScoped<PendingActionFactory>();
+        services.AddScoped<ICurrentValuesReader, CurrentValuesReader>();
+        services.AddScoped<PendingActionExecutor>();
 
         return services;
     }
