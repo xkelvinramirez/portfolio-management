@@ -9,4 +9,5 @@ public static class EndpointTags
     public const string Users = "Users";
     public const string Note = "Note";
     public const string Agent = "Agent";
+    public const string MafAgent = "MafAgent";
 }

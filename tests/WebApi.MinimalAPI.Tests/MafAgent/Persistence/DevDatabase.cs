@@ -37,6 +37,9 @@ internal static class DevDatabase
         ?? throw new InvalidOperationException(
             "Integration tests need ConnectionStrings:Database (env var ConnectionStrings__Database or WebApi user-secrets)."));
 
+    /// <summary>For hosts that build their own AppDbContext from configuration (plan T033).</summary>
+    public static string ConnectionStringValue => ConnectionString.Value;
+
     public static DbContextOptions<AppDbContext> Options(params IInterceptor[] interceptors) =>
         new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString.Value)
