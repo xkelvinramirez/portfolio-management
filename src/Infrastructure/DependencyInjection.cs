@@ -18,6 +18,8 @@ using Infrastructure.Reports;
 using Infrastructure.Agent;
 using Application.MafAgent.Interfaces;
 using Infrastructure.MafAgent.Persistence;
+using Infrastructure.MafAgent.Runner;
+using Infrastructure.MafAgent.Tools;
 using Infrastructure.Agent.Filters;
 using Infrastructure.Agent.Plugins;
 using Infrastructure.Resilience;
@@ -53,6 +55,7 @@ public static class DependencyInjection
             .AddSecurity()
             .AddCaching()
             .AddAgent(configuration)
+            .AddMafAgent()
             .AddHealthChecksForDependencies(configuration);
 
         return services;
@@ -85,6 +88,19 @@ public static class DependencyInjection
         return services;
     }
 
+    // Microsoft Agent Framework agent (plan T030). Scoped like the rest of the request: its tools carry the
+    // authenticated user's identity and the turn's proposed actions. It reuses the "InferenceClient" HttpClient
+    // registered above, so the inference timeout is the same as the Semantic Kernel agent's.
+    private static IServiceCollection AddMafAgent(this IServiceCollection services)
+    {
+        services.AddScoped<MafAgentReadTools>();
+        services.AddScoped<MafAgentProposeTools>();
+        services.AddScoped<IMafChatClientFactory, MafChatClientFactory>();
+        services.AddScoped<MafAgentRunner>();
+        services.AddScoped<IMafAgentRunner>(sp => sp.GetRequiredService<MafAgentRunner>());
+
+        return services;
+    }
     private static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("CosmosDb");

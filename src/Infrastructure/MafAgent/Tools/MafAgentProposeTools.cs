@@ -79,8 +79,8 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes creating a portfolio. Nothing is written until the user confirms the returned pending action.")]
     public Task<object> ProposeCreatePortfolio(
-        [Description("The portfolio name")] string? name,
-        [Description("Optional description")] string? description,
+        [Description("The portfolio name")] string? name = null,
+        [Description("Optional description")] string? description = null,
         CancellationToken cancellationToken = default)
     {
         if (IsBlank(name))
@@ -93,7 +93,7 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes editing one of the user's portfolios. Pass ONLY the fields that change. Nothing is written until the user confirms.")]
     public async Task<object> ProposeUpdatePortfolio(
-        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId,
+        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId = null,
         [Description("New name, only if it changes")] string? name = null,
         [Description("New description, only if it changes")] string? description = null,
         CancellationToken cancellationToken = default)
@@ -120,12 +120,12 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes recording a buy/holding entry in one of the user's portfolios. Every argument is required: ask the user for any that is missing. Nothing is written until the user confirms.")]
     public async Task<object> ProposeCreateEntry(
-        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId,
-        [Description("The asset symbol, e.g. BTC")] string? symbol,
-        [Description("The exchange name, e.g. Binance")] string? exchangeName,
-        [Description("The quantity, greater than 0")] decimal? quantity,
-        [Description("The price per unit, 0 or greater")] decimal? pricePerUnit,
-        [Description("When it was recorded. " + DateHint)] string? recordedAt,
+        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId = null,
+        [Description("The asset symbol, e.g. BTC")] string? symbol = null,
+        [Description("The exchange name, e.g. Binance")] string? exchangeName = null,
+        [Description("The quantity, greater than 0")] decimal? quantity = null,
+        [Description("The price per unit, 0 or greater")] decimal? pricePerUnit = null,
+        [Description("When it was recorded. " + DateHint)] string? recordedAt = null,
         CancellationToken cancellationToken = default)
     {
         if (portfolioId is null)
@@ -184,7 +184,7 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes editing one of the user's portfolio entries. Pass ONLY the fields that change. Nothing is written until the user confirms.")]
     public async Task<object> ProposeUpdateEntry(
-        [Description("The entry id, as returned by GetPortfolioEntries")] long? entryId,
+        [Description("The entry id, as returned by GetPortfolioEntries")] long? entryId = null,
         [Description("New quantity, only if it changes (greater than 0)")] decimal? quantity = null,
         [Description("New price per unit, only if it changes (0 or greater)")] decimal? pricePerUnit = null,
         [Description("New recorded date, only if it changes. " + DateHint)] string? recordedAt = null,
@@ -262,9 +262,9 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes creating a note. Category, title and content are required. Nothing is written until the user confirms.")]
     public Task<object> ProposeCreateNote(
-        [Description("The note category")] string? category,
-        [Description("The note title")] string? title,
-        [Description("The note content")] string? content,
+        [Description("The note category")] string? category = null,
+        [Description("The note title")] string? title = null,
+        [Description("The note content")] string? content = null,
         CancellationToken cancellationToken = default)
     {
         if (IsBlank(category))
@@ -287,7 +287,7 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes editing a note. Pass ONLY the fields that change; the note keeps its active state. Nothing is written until the user confirms.")]
     public async Task<object> ProposeUpdateNote(
-        [Description("The note id, as returned by ListNotes")] string? noteId,
+        [Description("The note id, as returned by ListNotes")] string? noteId = null,
         [Description("New category, only if it changes")] string? category = null,
         [Description("New title, only if it changes")] string? title = null,
         [Description("New content, only if it changes")] string? content = null,
@@ -318,7 +318,7 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes refreshing the current prices of one of the user's portfolios. Nothing runs until the user confirms.")]
     public async Task<object> ProposeRefreshPrices(
-        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId,
+        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId = null,
         CancellationToken cancellationToken = default)
     {
         if (portfolioId is null)
@@ -332,7 +332,7 @@ internal sealed class MafAgentProposeTools(
 
     [Description("Proposes sending the status report of one of the user's portfolios by e-mail. Without a period it covers the previous calendar month. Nothing is sent until the user confirms.")]
     public async Task<object> ProposeSendStatusReport(
-        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId,
+        [Description("The portfolio id, as returned by ListMyPortfolios")] long? portfolioId = null,
         [Description("Optional first day of the period (yyyy-MM-dd), together with periodEnd")] string? periodStart = null,
         [Description("Optional last day of the period (yyyy-MM-dd), together with periodStart")] string? periodEnd = null,
         CancellationToken cancellationToken = default)

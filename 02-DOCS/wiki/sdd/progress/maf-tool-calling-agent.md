@@ -288,3 +288,17 @@ slug: maf-tool-calling-agent
 - corregido: mutantes supervivientes (edición con cantidad 0, precio negativo, hora del hueco de verano) y huecos de test (precio 0 al crear, ids ausentes). 50/50; unit 418/418; integración 11/11.
 - minor aceptados / para el usuario: (1) en una edición, un valor en blanco = "no cambia": no se puede vaciar una descripción por el agente; (2) hora ambigua del cambio de otoño → horario estándar; fechas no ISO se leen en cultura invariante (la descripción pide ISO); (4) longitudes no se validan al proponer (al confirmar sería `Failed`).
 - abierto para el usuario: en `ProposeCreateEntry`/`ProposeUpdateEntry`, una fecha SIN hora ("2026-11-10") se lee como medianoche de Madrid = 23:00 UTC del día 9, y Domain agrupa las entradas por día UTC. Sigue la regla del plan ("sin offset → Madrid"), pero puede mostrar la entrada un día antes.
+## T029–T030 — 2026-11-12
+- status: complete
+- red: CS0234/CS0246 (`Infrastructure.MafAgent.Runner` ausente). green: runner 14/14, fábrica 4/4, DI 2/2; unit 439/439; integración 11/11.
+- mutantes: 17; 16 detectados (1 tras fijar el número de llamadas al modelo) y 1 que no compila.
+- decisiones:
+  - **Límite de pasos:** el middleware de invocación de funciones (`AIAgentBuilder.Use`) cuenta las llamadas del turno. Al pasar el límite no ejecuta la herramienta, pone `Terminate` y deja una marca. El runner lanza `AgentLoopExhaustedException` al terminar `RunAsync`. No se lanza desde dentro del middleware: no depende de si `FunctionInvokingChatClient` captura excepciones de herramientas.
+  - Contexto horario: un mensaje de sistema por turno, antes del mensaje del usuario (queda en el historial de la sesión).
+  - `AppendSystemNoteAsync`: añade un mensaje de sistema con `TryGetInMemoryChatHistory`/`SetInMemoryChatHistory`, sin llamar al modelo.
+  - Fábrica del cliente: modelo de razonamiento de `AiOptions`, transporte del `HttpClient` "InferenceClient" (el timeout de Polly ya registrado para SK). Azure sin endpoint → `InvalidOperationException`.
+  - Log de fallo de herramienta: solo el TIPO de excepción, vía filtro de excepción que registra y devuelve false (no hay `catch` de `Exception`).
+  - **Defecto de T028 corregido aquí:** los parámetros nullable de `Propose*` no tenían `= null`, así que `AIFunctionFactory` los marcaba obligatorios y un dato omitido fallaba al enlazar en vez de llegar como `MissingOrAmbiguous:<campo>`. Test nuevo que invoca el `AIFunction` sin `pricePerUnit`.
+  - DI: `AddMafAgent()` en Infrastructure (herramientas, fábrica y runner scoped; `IMafAgentRunner` → `MafAgentRunner`). `*/Agent/` sin cambios.
+- files: src/Infrastructure/{DependencyInjection.cs,MafAgent/Runner/MafAgentRunner.cs,MafAgent/Runner/MafChatClientFactory.cs,MafAgent/Tools/MafAgentProposeTools.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/{Runner/*,Tools/MafAgentProposeToolsTests.cs}
+- verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T029-T030.md)

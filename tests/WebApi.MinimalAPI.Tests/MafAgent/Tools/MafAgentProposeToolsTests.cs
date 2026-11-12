@@ -481,6 +481,23 @@ public sealed class MafAgentProposeToolsTests
     }
 
     [Fact]
+    public async Task InvokedThroughTheAIFunction_AnOmittedArgument_ReachesTheToolAsMissingOrAmbiguous()
+    {
+        AIFunction create = _tools.GetTools().Single(f => f.Name == "ProposeCreateEntry");
+
+        object? result = await create.InvokeAsync(new AIFunctionArguments
+        {
+            ["portfolioId"] = OwnedPortfolioId,
+            ["symbol"] = "BTC",
+            ["exchangeName"] = "Binance",
+            ["quantity"] = 1m,
+            ["recordedAt"] = "2026-11-10T19:30:00",
+        }, Token);
+
+        result!.ToString().Should().Contain("MissingOrAmbiguous:pricePerUnit");
+        NothingStaged();
+    }
+    [Fact]
     public async Task InvokedThroughTheAIFunction_ADateWithoutOffsetIsStillReadInMadrid()
     {
         AIFunction create = _tools.GetTools().Single(f => f.Name == "ProposeCreateEntry");
