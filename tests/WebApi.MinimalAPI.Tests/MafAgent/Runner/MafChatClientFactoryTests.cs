@@ -68,6 +68,52 @@ public sealed class MafChatClientFactoryTests
     }
 
     [Fact]
+    public async Task TheInferenceHttpClient_IsTheTransport_WithoutItsOwnTimeoutOrClientRetries()
+    {
+        CountingHandler handler = new();
+        HttpClient httpClient = new(handler);
+        IHttpClientFactory http = Substitute.For<IHttpClientFactory>();
+        http.CreateClient("InferenceClient").Returns(httpClient);
+        IChatClient client = new MafChatClientFactory(Options.Create(new AiOptions
+        {
+            Provider = AiProviderType.Ollama,
+            ReasoningModel = new ModelOptions { ModelId = "m", Endpoint = "http://localhost:11434/v1" },
+        }), http).Create();
+
+        Func<Task> call = () => client.GetResponseAsync("hola", cancellationToken: TestContext.Current.CancellationToken);
+
+        await call.Should().ThrowAsync<Exception>();
+        handler.Requests.Should().Be(1, "only the InferenceClient pipeline may retry, not the OpenAI client");
+        handler.LastUri!.ToString().Should().StartWith("http://localhost:11434/v1");
+        httpClient.Timeout.Should().Be(Timeout.InfiniteTimeSpan, "only Ai:RequestTimeoutSeconds (Polly) may time out");
+    }
+
+    [Fact]
+    public void Ollama_WithoutEndpoint_IsAConfigurationError_InsteadOfCallingOpenAI()
+    {
+        Action act = () => Create(new AiOptions
+        {
+            Provider = AiProviderType.Ollama,
+            ReasoningModel = new ModelOptions { ModelId = "qwen2.5:3b-instruct" },
+        });
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Endpoint*");
+    }
+
+    private sealed class CountingHandler : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+
+        public Uri? LastUri { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            LastUri = request.RequestUri;
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+        }
+    }
+    [Fact]
     public void AzureOpenAI_WithoutEndpoint_IsAConfigurationError()
     {
         Action act = () => Create(new AiOptions

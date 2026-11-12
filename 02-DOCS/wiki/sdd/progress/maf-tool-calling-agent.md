@@ -302,3 +302,13 @@ slug: maf-tool-calling-agent
   - DI: `AddMafAgent()` en Infrastructure (herramientas, fábrica y runner scoped; `IMafAgentRunner` → `MafAgentRunner`). `*/Agent/` sin cambios.
 - files: src/Infrastructure/{DependencyInjection.cs,MafAgent/Runner/MafAgentRunner.cs,MafAgent/Runner/MafChatClientFactory.cs,MafAgent/Tools/MafAgentProposeTools.cs}, tests/WebApi.MinimalAPI.Tests/MafAgent/{Runner/*,Tools/MafAgentProposeToolsTests.cs}
 - verify: PASS (verifications/maf-tool-calling-agent-2026-11-12-T029-T030.md)
+## T029–T030 — revisión por bloque + decisión de fechas — 2026-11-12
+- status: complete
+- review: VERDICT fail, 1 important (reproducido por el revisor con una sonda real).
+- **important #1 corregido (AC14):** el cliente de OpenAI tenía su propio timeout de red de 100 s y 3 reintentos, y el `HttpClient` su propio `Timeout` de 100 s. Con `Ai:RequestTimeoutSeconds` = 240 (Development) la petición se cortaba a los 100 s, se reintentaba (unos 400 s en total) y salía como `TaskCanceledException` → 500, no como `MafAgent.Timeout`. Ahora: `HttpClient.Timeout`, `NetworkTimeout` infinitos y `ClientRetryPolicy(0)` (OpenAI y Azure): solo el pipeline de Polly de "InferenceClient" corta y reintenta. El runner trata como timeout `TimeoutRejectedException`, `TimeoutException` y cualquier cancelación que el llamador NO pidió; una cancelación pedida se propaga tal cual. El agente SK tiene el mismo hueco, pero está congelado (no se toca).
+- minor #2 corregido: el mensaje de contexto horario se acumulaba en el historial (varias "horas actuales" contradictorias). Ahora solo queda el del turno actual (`DropPreviousTimeContexts`).
+- minor #4 corregido: Ollama sin `Endpoint` → error de configuración (antes llamaba a api.openai.com en silencio).
+- mutantes supervivientes cubiertos: mapeo del puerto `IMafAgentRunner` → `MafAgentRunner` en producción (`AddMafAgent` pasa a `internal` para probarlo), uso del transporte y ausencia de reintentos del cliente, log de una herramienta que falla (solo el tipo de excepción).
+- minor #3 aceptado: los parámetros `= null` aparecen como opcionales en el esquema; encaja con `MissingOrAmbiguous`.
+- **Decisión del usuario (2026-11-12):** una fecha SIN hora que llega a una herramienta es ese día a las 00:00 UTC (entradas y periodo del informe), no la medianoche de Madrid. Una regla única en `TryParseInstant`; se elimina `TryParsePeriodBound`. Anotada en plan §0 "Payloads tipados" y en `harness/decisions.md`.
+- 10 mutantes de los arreglos, todos detectados. unit 449/449; integración 11/11.

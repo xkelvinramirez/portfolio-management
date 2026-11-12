@@ -48,7 +48,7 @@ internal sealed class MafAgentProposeTools(
 {
     public const string NotFound = "NotFound";
 
-    private const string DateHint = "ISO-8601 instant. Prefer UTC with Z (2026-11-10T18:30:00Z); without an offset it is read as Europe/Madrid local time";
+    private const string DateHint = "ISO-8601. A date alone (2026-11-10) is that day; an instant should be UTC with Z (2026-11-10T18:30:00Z); a date and time without offset is read as Europe/Madrid local time";
 
     private readonly List<PendingAction> _proposed = [];
     private Guid? _conversationId;
@@ -349,7 +349,7 @@ internal sealed class MafAgentProposeTools(
             // Resolved NOW, with the same function the report handler uses: the payload never has a null period.
             (start, end) = PortfolioStatusReportPeriod.PreviousCalendarMonth(timeProvider.GetUtcNow().UtcDateTime);
         }
-        else if (!TryParsePeriodBound(periodStart, out start) || !TryParsePeriodBound(periodEnd, out end) || start > end)
+        else if (!TryParseInstant(periodStart, out start) || !TryParseInstant(periodEnd, out end) || start > end)
         {
             return Missing("period");
         }
@@ -436,10 +436,20 @@ internal sealed class MafAgentProposeTools(
 
     private static bool IsBlank(string? value) => string.IsNullOrWhiteSpace(value);
 
-    /// <summary>With Z or an offset: that instant. Without an offset: Europe/Madrid local time. Always Kind=Utc.</summary>
+    /// <summary>
+    /// A date without time (yyyy-MM-dd): that calendar day at 00:00 UTC, because Domain and the reports group by UTC
+    /// day and Madrid midnight is the previous UTC day (user decision, 2026-11-12). With Z or an offset: that instant.
+    /// A date and time without offset: Europe/Madrid local time. Always Kind=Utc.
+    /// </summary>
     private static bool TryParseInstant(string? text, out DateTime utc)
     {
         utc = default;
+        if (DateTime.TryParseExact(text?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime day))
+        {
+            utc = DateTime.SpecifyKind(day, DateTimeKind.Utc);
+            return true;
+        }
+
         if (IsBlank(text) ||
             !DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind | DateTimeStyles.AllowWhiteSpaces, out DateTime parsed))
         {
@@ -465,21 +475,6 @@ internal sealed class MafAgentProposeTools(
         }
     }
 
-    /// <summary>
-    /// The report period is made of DAYS: the report handler and the Domain use the UTC date of each bound, and the
-    /// default period is 00:00 UTC of each day. So a date without time ("2026-09-30") is that calendar day at
-    /// 00:00 UTC, not Madrid midnight (which is the previous UTC day). A full instant follows TryParseInstant.
-    /// </summary>
-    private static bool TryParsePeriodBound(string? text, out DateTime utc)
-    {
-        if (DateTime.TryParseExact(text?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime day))
-        {
-            utc = DateTime.SpecifyKind(day, DateTimeKind.Utc);
-            return true;
-        }
-
-        return TryParseInstant(text, out utc);
-    }
     // The current values come from ICurrentValuesReader in the FieldSnapshot format ("G29", "O").
     private static long ParseLong(string? value) => long.Parse(value!, CultureInfo.InvariantCulture);
 

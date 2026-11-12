@@ -204,6 +204,13 @@ public sealed class MafAgentProposeToolsTests
     }
 
     [Fact]
+    public async Task ADateWithoutTime_IsThatDayInUtc_NotMadridMidnight()
+    {
+        await _tools.ProposeCreateEntry(OwnedPortfolioId, "BTC", "Binance", 1m, 1m, "2026-11-10", Token);
+
+        PayloadOf<CreateEntryPayload>(Staged()).RecordedAt.Should().Be(new DateTime(2026, 11, 10, 0, 0, 0, DateTimeKind.Utc));
+    }
+    [Fact]
     public async Task ADateWithoutOffset_InMadridSummerTime_UsesTheSummerOffset()
     {
         await _tools.ProposeCreateEntry(OwnedPortfolioId, "BTC", "Binance", 1m, 1m, "2026-07-01T12:00:00", Token);

@@ -91,7 +91,7 @@ public static class DependencyInjection
     // Microsoft Agent Framework agent (plan T030). Scoped like the rest of the request: its tools carry the
     // authenticated user's identity and the turn's proposed actions. It reuses the "InferenceClient" HttpClient
     // registered above, so the inference timeout is the same as the Semantic Kernel agent's.
-    private static IServiceCollection AddMafAgent(this IServiceCollection services)
+    internal static IServiceCollection AddMafAgent(this IServiceCollection services)
     {
         services.AddScoped<MafAgentReadTools>();
         services.AddScoped<MafAgentProposeTools>();

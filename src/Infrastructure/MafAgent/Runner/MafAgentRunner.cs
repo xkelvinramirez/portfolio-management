@@ -55,6 +55,10 @@ internal sealed class MafAgentRunner(
         "4. Resolve relative dates (yesterday, last Monday, this month) in the Europe/Madrid time zone from the local " +
         "time given in the context, and pass tools the equivalent UTC instant with a Z suffix.";
 
+    // Marks the per-turn time message. Only the current one is kept in the history: older ones would leave the
+    // model several conflicting "current" times (and grow the session on every turn).
+    internal const string TimeContextMarker = "Context for this turn:";
+
     private int _toolCalls;
     private bool _loopExhausted;
     private Guid _conversationId;
@@ -69,13 +73,14 @@ internal sealed class MafAgentRunner(
 
         AIAgent agent = BuildAgent();
         AgentSession session = await RestoreSessionAsync(agent, decryptedSessionJson, ct);
+        DropPreviousTimeContexts(session);
 
         AgentResponse response;
         try
         {
             response = await agent.RunAsync([TimeContext(), new ChatMessage(ChatRole.User, message)], session, cancellationToken: ct);
         }
-        catch (Exception exception) when (IsInferenceTimeout(exception))
+        catch (Exception exception) when (IsInferenceTimeout(exception, ct))
         {
             logger.LogWarning("MAF agent turn in conversation {ConversationId} timed out waiting for the model", conversation.Id);
             throw new AgentTimeoutException();
@@ -134,7 +139,7 @@ internal sealed class MafAgentRunner(
     {
         DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
         return new ChatMessage(ChatRole.System,
-            $"Context for this turn: current time {BusinessTime.FormatUtc(utcNow)} (UTC); " +
+            $"{TimeContextMarker} current time {BusinessTime.FormatUtc(utcNow)} (UTC); " +
             $"local business time {BusinessTime.FormatLocal(utcNow)}; business time zone id {BusinessTime.ZoneId}.");
     }
 
@@ -177,11 +182,23 @@ internal sealed class MafAgentRunner(
         return false;
     }
 
-    private static bool IsInferenceTimeout(Exception exception)
+    private static void DropPreviousTimeContexts(AgentSession session)
+    {
+        if (session.TryGetInMemoryChatHistory(out List<ChatMessage>? history) &&
+            history.RemoveAll(m => m.Role == ChatRole.System && m.Text.StartsWith(TimeContextMarker, StringComparison.Ordinal)) > 0)
+        {
+            session.SetInMemoryChatHistory(history);
+        }
+    }
+
+    // A timeout is the inference pipeline's (Polly TimeoutRejectedException), or any timeout/cancellation that the
+    // caller did NOT ask for. A cancellation the caller requested (ct) is not a timeout and propagates as is.
+    private static bool IsInferenceTimeout(Exception exception, CancellationToken ct)
     {
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
-            if (current is TimeoutRejectedException)
+            if (current is TimeoutRejectedException or TimeoutException ||
+                (current is OperationCanceledException && !ct.IsCancellationRequested))
             {
                 return true;
             }

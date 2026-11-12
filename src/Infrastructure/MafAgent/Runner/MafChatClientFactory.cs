@@ -29,7 +29,12 @@ internal sealed class MafChatClientFactory(IOptions<AiOptions> options, IHttpCli
         ModelOptions model = ai.ReasoningModel;
         string modelId = string.IsNullOrWhiteSpace(model.ModelId) ? "llama3.2" : model.ModelId;
         ApiKeyCredential key = new(string.IsNullOrWhiteSpace(model.ApiKey) ? "unused" : model.ApiKey);
-        HttpClientPipelineTransport transport = new(httpClientFactory.CreateClient(InferenceClientName));
+        // Only the "InferenceClient" resilience pipeline (Polly, Ai:RequestTimeoutSeconds) may time out or retry:
+        // HttpClient's own 100 s timeout, System.ClientModel's 100 s network timeout and its retries would cut a
+        // slow local model first, retry it, and surface as a TaskCanceledException instead of the mapped timeout.
+        HttpClient httpClient = httpClientFactory.CreateClient(InferenceClientName);
+        httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        HttpClientPipelineTransport transport = new(httpClient);
 
         if (ai.Provider == AiProviderType.AzureOpenAI)
         {
@@ -38,15 +43,20 @@ internal sealed class MafChatClientFactory(IOptions<AiOptions> options, IHttpCli
                 throw new InvalidOperationException("Ai:ReasoningModel:Endpoint is required when Ai:Provider is AzureOpenAI.");
             }
 
-            return new AzureOpenAIClient(new Uri(model.Endpoint), key, new AzureOpenAIClientOptions { Transport = transport })
+            return new AzureOpenAIClient(new Uri(model.Endpoint), key, new AzureOpenAIClientOptions { Transport = transport, NetworkTimeout = Timeout.InfiniteTimeSpan, RetryPolicy = new ClientRetryPolicy(0) })
                 .GetChatClient(string.IsNullOrWhiteSpace(model.DeploymentName) ? modelId : model.DeploymentName)
                 .AsIChatClient();
         }
 
-        OpenAIClientOptions clientOptions = new() { Transport = transport };
+        OpenAIClientOptions clientOptions = new() { Transport = transport, NetworkTimeout = Timeout.InfiniteTimeSpan, RetryPolicy = new ClientRetryPolicy(0) };
         if (!string.IsNullOrWhiteSpace(model.Endpoint))
         {
             clientOptions.Endpoint = new Uri(model.Endpoint);
+        }
+        else if (ai.Provider == AiProviderType.Ollama)
+        {
+            // Without it the OpenAI client would silently call api.openai.com.
+            throw new InvalidOperationException("Ai:ReasoningModel:Endpoint is required when Ai:Provider is Ollama.");
         }
 
         return new OpenAIClient(key, clientOptions).GetChatClient(modelId).AsIChatClient();

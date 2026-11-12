@@ -246,6 +246,78 @@ public sealed class MafAgentRunnerTests
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    [Fact]
+    public async Task ACancellationTheCallerDidNotAskFor_IsATimeout()
+    {
+        ScriptedChatClient model = new((_, _) => throw new TaskCanceledException("HttpClient.Timeout elapsed", new TimeoutException()));
+
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+
+        await act.Should().ThrowAsync<AgentTimeoutException>();
+    }
+
+    [Fact]
+    public async Task ABareTimeoutException_IsATimeout()
+    {
+        ScriptedChatClient model = new((_, _) => throw new TimeoutException("socket timeout"));
+
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+
+        await act.Should().ThrowAsync<AgentTimeoutException>();
+    }
+
+    [Fact]
+    public async Task AnOperationCanceledWhileTheCallerStillWaits_IsATimeout()
+    {
+        ScriptedChatClient model = new((_, _) => throw new OperationCanceledException());
+
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+
+        await act.Should().ThrowAsync<AgentTimeoutException>();
+    }
+
+    [Fact]
+    public async Task ACancellationTheCallerAskedFor_IsNotATimeout()
+    {
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(Token);
+        ScriptedChatClient model = new((_, _) =>
+        {
+            cts.Cancel();
+            throw new OperationCanceledException(cts.Token);
+        });
+
+        Func<Task> act = () => Runner(model).RunTurnAsync(_conversation, "", "hola", cts.Token);
+
+        (await act.Should().ThrowAsync<OperationCanceledException>()).Which.Should().NotBeOfType<AgentTimeoutException>();
+    }
+
+    [Fact]
+    public async Task OnlyTheCurrentTimeContext_IsSentAndKept_NotTheOnesOfPreviousTurns()
+    {
+        MafAgentTurnResult first = await Runner(AnswersWith("uno")).RunTurnAsync(_conversation, "", "primera", Token);
+        _time.Advance(TimeSpan.FromDays(1));
+        ScriptedChatClient model = AnswersWith("dos");
+
+        MafAgentTurnResult second = await Runner(model).RunTurnAsync(_conversation, first.SerializedSessionJson, "segunda", Token);
+
+        List<string> contexts = model.Calls[0].Messages.Select(m => m.Text).Where(t => t.StartsWith(MafAgentRunner.TimeContextMarker)).ToList();
+        contexts.Should().ContainSingle().Which.Should().Contain("2026-11-11T23:30:00Z");
+        second.SerializedSessionJson.Should().NotContain("2026-11-10T23:30:00Z", "the previous turn's time is dropped from the history");
+        model.Calls[0].Messages.Select(m => m.Text).Should().Contain(["primera", "uno"]);
+    }
+
+    [Fact]
+    public async Task AFailingTool_IsLoggedWithItsExceptionType_ButNotItsMessage()
+    {
+        _sender.Send(Arg.Any<GetNotesQuery>(), Arg.Any<CancellationToken>())
+            .Returns<Task<ErrorOr<PaginatorResponse<NoteResponse>>>>(_ => throw new InvalidOperationException("detalle-secreto"));
+        ScriptedChatClient model = new((i, _) => i == 0 ? ScriptedChatClient.ToolCall("ListNotes") : ScriptedChatClient.Text("no pude"));
+
+        await Runner(model).RunTurnAsync(_conversation, "", "hola", Token);
+
+        _logger.Entries.Should().Contain(e => e.Level == LogLevel.Warning && e.Message.Contains("ListNotes") && e.Message.Contains("InvalidOperationException"));
+        string.Join("\n", _logger.Entries.Select(e => e.Message + e.Exception)).Should().NotContain("detalle-secreto");
+    }
     // ---- logs (plan §0 "Logs") ----
 
     [Fact]

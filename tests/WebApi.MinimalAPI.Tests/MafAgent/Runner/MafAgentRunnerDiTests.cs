@@ -1,5 +1,6 @@
 using Application.MafAgent.Interfaces;
 using FluentAssertions;
+using Infrastructure;
 using Infrastructure.MafAgent.Runner;
 using Infrastructure.MafAgent.Tools;
 using Microsoft.Extensions.AI;
@@ -41,5 +42,37 @@ public sealed class MafAgentRunnerDiTests : IClassFixture<MafAgentApiFactory>
         IChatClient client = scope.ServiceProvider.GetRequiredService<IMafChatClientFactory>().Create();
 
         client.GetService<ChatClientMetadata>()!.ProviderUri!.Host.Should().Be("unused.invalid");
+    }
+
+    [Fact]
+    public void InProduction_ThePortResolvesToTheMafRunner_Scoped()
+    {
+        ServiceCollection services = new();
+        services.AddMafAgent();
+
+        ServiceDescriptor port = services.Single(d => d.ServiceType == typeof(IMafAgentRunner));
+        port.Lifetime.Should().Be(ServiceLifetime.Scoped);
+
+        // The real dependencies of the runner and its tools, as doubles: only the port mapping is under test.
+        services.AddLogging();
+        services.AddOptions<Infrastructure.Common.Options.AiOptions>();
+        services.AddHttpClient();
+        services.AddSingleton(TimeProvider.System);
+        foreach (Type type in new[]
+                 {
+                     typeof(Application.Portfolios.Interfaces.IPortfolioRepository), typeof(Application.PortfolioEntries.Interfaces.IPortfolioEntryRepository),
+                     typeof(MediatR.ISender), typeof(Application.Common.Security.ICurrentUserProvider), typeof(Application.Common.Security.IEncryptionService),
+                     typeof(IPendingActionRepository), typeof(ICurrentValuesReader),
+                 })
+        {
+            services.AddScoped(type, _ => NSubstitute.Substitute.For([type], []));
+        }
+
+        services.AddScoped<Application.MafAgent.PendingActionFactory>();
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using IServiceScope scope = provider.CreateScope();
+
+        scope.ServiceProvider.GetRequiredService<IMafAgentRunner>().Should().BeOfType<MafAgentRunner>()
+            .And.BeSameAs(scope.ServiceProvider.GetRequiredService<MafAgentRunner>());
     }
 }
